@@ -5,10 +5,5 @@
   "framework": "vite",
   "outputDirectory": "dist",
   "public": false,
-  "regions": ["sfo1"],
-  "functions": {
-    "api/**/*.ts": {
-      "runtime": "nodejs20.x"
-    }
-  }
+  "regions": ["sfo1"]
 }
