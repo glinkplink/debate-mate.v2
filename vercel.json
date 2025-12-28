@@ -2,13 +2,18 @@
   "buildCommand": "pnpm build",
   "devCommand": "pnpm dev",
   "installCommand": "pnpm install",
-  "framework": "vite",
-  "outputDirectory": "dist",
-  "public": false,
-  "regions": ["sfo1"],
-  "functions": {
-    "api/**/*.ts": {
-      "runtime": "nodejs20.x"
+  "outputDirectory": "client/dist",
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/server/index.ts"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/client/dist/index.html"
     }
-  }
+  ]
 }
