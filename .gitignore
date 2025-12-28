@@ -1,6 +1,7 @@
 # Dependencies
 **/node_modules
 .pnpm-store/
+.env
 
 # Build outputs
 dist/
@@ -104,3 +105,4 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
+
