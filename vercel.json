@@ -1,7 +1,5 @@
-cat > vercel.json << 'EOF'
 {
   "buildCommand": "pnpm build",
   "installCommand": "pnpm install",
   "outputDirectory": "dist/public"
 }
-EOF
