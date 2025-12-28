@@ -1,22 +1,5 @@
 {
-  "buildCommand": "pnpm build",
-  "devCommand": "pnpm dev",
+  "buildCommand": "cd client && pnpm build",
   "installCommand": "pnpm install",
-  "framework": "vite",
-  "outputDirectory": "client/dist",
-  "public": false,
-  "regions": ["sfo1"],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/server/index.ts"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/client/dist/index.html"
-    }
-  ]
+  "outputDirectory": "client/dist"
 }
