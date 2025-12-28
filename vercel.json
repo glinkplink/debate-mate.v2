@@ -1,0 +1,26 @@
+{
+  "buildCommand": "pnpm build",
+  "devCommand": "pnpm dev",
+  "installCommand": "pnpm install",
+  "framework": "vite",
+  "outputDirectory": "dist",
+  "public": false,
+  "env": [
+    {
+      "key": "VITE_APP_TITLE",
+      "value": "Debate Mate",
+      "type": "plain"
+    },
+    {
+      "key": "VITE_APP_LOGO",
+      "value": "/logo.png",
+      "type": "plain"
+    }
+  ],
+  "regions": ["sfo1"],
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "nodejs18.x"
+    }
+  }
+}
