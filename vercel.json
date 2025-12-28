@@ -2,7 +2,10 @@
   "buildCommand": "pnpm build",
   "devCommand": "pnpm dev",
   "installCommand": "pnpm install",
+  "framework": "vite",
   "outputDirectory": "client/dist",
+  "public": false,
+  "regions": ["sfo1"],
   "routes": [
     {
       "src": "/api/(.*)",
