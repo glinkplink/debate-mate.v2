@@ -1,5 +1,5 @@
 {
   "buildCommand": "pnpm build",
   "installCommand": "pnpm install",
-  "outputDirectory": "dist/public"
+  "outputDirectory": "dist"
 }
