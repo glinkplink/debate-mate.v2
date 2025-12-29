@@ -114,24 +114,7 @@ export default function Home() {
           </p>
         </Card>
 
-        {/* API Key Input */}
-        <Card className="mb-8 p-6 shadow-lg border-l-4 border-purple-500">
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            {mode === 'petty' ? 'Grok API Key' : 'Claude API Key'}
-          </label>
-          <Input
-            type="password"
-            placeholder={`Enter your ${mode === 'petty' ? 'Grok' : 'Claude'} API key`}
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            className="mb-2"
-          />
-          <p className="text-xs text-gray-500">
-            {mode === 'petty'
-              ? 'Get your Grok API key from https://console.x.ai'
-              : 'Get your Claude API key from https://console.anthropic.com'}
-          </p>
-        </Card>
+
 
         {/* Debate Input Section */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
