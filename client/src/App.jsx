@@ -13,7 +13,6 @@ function App() {
   const [name2, setName2] = useState("");
   const [text1, setText1] = useState("");
   const [text2, setText2] = useState("");
-  const [apiKey, setApiKey] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
@@ -28,12 +27,11 @@ function App() {
   const modeLabel = mode === "petty" ? "Petty" : "Productive";
   const accent =
     mode === "petty"
-      ? "from-emerald-500 to-green-600"
-      : "from-sky-500 to-blue-600";
+      ? "from-orange-500 to-pink-500"
+      : "from-indigo-500 to-sky-500";
 
   const disableAnalyze =
     loading ||
-    !apiKey.trim() ||
     !text1.trim() ||
     !text2.trim();
 
@@ -44,6 +42,16 @@ function App() {
     setLoading(true);
     setError("");
 
+    const grokKey = import.meta.env.VITE_GROK_API_KEY || "";
+    const claudeKey = import.meta.env.VITE_CLAUDE_API_KEY || "";
+    const apiKey = mode === "petty" ? grokKey : claudeKey;
+
+    if (!apiKey) {
+      setError("Missing API key in environment. Set VITE_GROK_API_KEY and/or VITE_CLAUDE_API_KEY.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const raw = await analyzeDebate(
         mode,
@@ -51,7 +59,7 @@ function App() {
         text1,
         name2 || "Person 2",
         text2,
-        apiKey.trim()
+        apiKey
       );
 
       const parsed = parseAIResponse(raw) || {
@@ -103,41 +111,44 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-700 to-purple-400 flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-4xl">
-        <div className="bg-white/95 backdrop-blur rounded-2xl shadow-xl p-6 md:p-8 space-y-6">
-          <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Debate Mate</h1>
-              <p className="text-gray-600 text-sm">
-                Quick AI-powered debate analyzer with petty or productive vibes.
+    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-800 text-white flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-5xl space-y-4">
+        <div className="bg-white/5 border border-white/10 rounded-2xl shadow-2xl p-6 md:p-8 backdrop-blur">
+          <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <div className="space-y-1">
+              <p className="text-xs uppercase tracking-[0.25em] text-white/60">
+                Debate Mate
+              </p>
+              <h1 className="text-3xl md:text-4xl font-semibold">
+                Settle arguments in seconds.
+              </h1>
+              <p className="text-white/70 text-sm">
+                Drop two perspectives, pick the vibe, get an instant ruling.
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-gray-700">Mode</span>
-              <button
-                onClick={() =>
-                  setMode((prev) => (prev === "petty" ? "productive" : "petty"))
-                }
-                className={`rounded-full px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r ${accent} shadow-md transition`}
-              >
-                {modeLabel}
-              </button>
-            </div>
+            <button
+              onClick={() =>
+                setMode((prev) => (prev === "petty" ? "productive" : "petty"))
+              }
+              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r ${accent} shadow-lg transition`}
+            >
+              <span className="h-2 w-2 rounded-full bg-white" />
+              {modeLabel} Mode
+            </button>
           </header>
 
-          <section className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-3">
-              <label className="text-sm font-semibold text-gray-800">
+              <label className="text-xs uppercase tracking-wide text-white/60">
                 Name 1
               </label>
               <input
                 value={name1}
                 onChange={(e) => setName1(e.target.value)}
-                placeholder="Person 1"
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                placeholder="Person 1 (optional)"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
               />
-              <label className="text-sm font-semibold text-gray-800">
+              <label className="text-xs uppercase tracking-wide text-white/60">
                 Perspective 1
               </label>
               <textarea
@@ -145,21 +156,21 @@ function App() {
                 onChange={(e) => setText1(e.target.value)}
                 placeholder="Their argument..."
                 rows={6}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
               />
             </div>
 
             <div className="space-y-3">
-              <label className="text-sm font-semibold text-gray-800">
+              <label className="text-xs uppercase tracking-wide text-white/60">
                 Name 2
               </label>
               <input
                 value={name2}
                 onChange={(e) => setName2(e.target.value)}
-                placeholder="Person 2"
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                placeholder="Person 2 (optional)"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
               />
-              <label className="text-sm font-semibold text-gray-800">
+              <label className="text-xs uppercase tracking-wide text-white/60">
                 Perspective 2
               </label>
               <textarea
@@ -167,101 +178,92 @@ function App() {
                 onChange={(e) => setText2(e.target.value)}
                 placeholder="Their argument..."
                 rows={6}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
               />
             </div>
-          </section>
+          </div>
 
-          <section className="grid md:grid-cols-3 gap-4">
-            <div className="md:col-span-2 space-y-3">
-              <label className="text-sm font-semibold text-gray-800">
-                API Key
-              </label>
-              <input
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Enter your Grok/Claude API key"
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400"
-              />
-              <p className="text-xs text-gray-500">
-                Keys stay in your browser (localStorage only).
-              </p>
-            </div>
-            <div className="flex items-end gap-3">
-              <button
-                onClick={handleAnalyze}
-                disabled={disableAnalyze}
-                className={`flex-1 rounded-lg px-4 py-3 text-white font-semibold shadow-md transition ${
-                  disableAnalyze
-                    ? "bg-gray-300 cursor-not-allowed"
-                    : `bg-gradient-to-r ${accent} hover:opacity-90`
-                }`}
-              >
-                {loading ? "Analyzing..." : "Analyze"}
-              </button>
-              <button
-                onClick={handleReset}
-                className="rounded-lg px-4 py-3 border border-gray-200 text-gray-700 font-semibold hover:bg-gray-50"
-              >
-                Reset
-              </button>
-            </div>
-          </section>
+          <div className="flex flex-col md:flex-row gap-3 mt-4">
+            <button
+              onClick={handleAnalyze}
+              disabled={disableAnalyze}
+              className={`flex-1 rounded-xl px-4 py-3 text-white font-semibold shadow-lg transition bg-gradient-to-r ${accent} ${
+                disableAnalyze ? "opacity-50 cursor-not-allowed" : "hover:scale-[1.01]"
+              }`}
+            >
+              {loading ? "Analyzing..." : "Analyze debate"}
+            </button>
+            <button
+              onClick={handleReset}
+              className="rounded-xl px-4 py-3 border border-white/15 text-white/80 font-semibold hover:bg-white/5 transition"
+            >
+              Reset
+            </button>
+          </div>
 
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="mt-4 rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
               {error}
             </div>
           )}
 
           {result && (
-            <section className="rounded-2xl border border-gray-100 bg-gradient-to-br from-white to-purple-50 p-5 shadow-inner">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
+            <section className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-inner space-y-3">
+              <div className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-gray-500">
+                  <p className="text-xs uppercase tracking-wide text-white/60">
                     Winner
                   </p>
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    {result.winner}
-                  </h2>
+                  <h2 className="text-2xl font-semibold">{result.winner}</h2>
                 </div>
-                <div className="flex gap-3 text-sm">
-                  <span className="bg-white rounded-full px-3 py-1 shadow">
-                    {result.person1Name}: {result.winner === result.person1Name ? result.winnerScore : result.loserScore}/10
-                  </span>
-                  <span className="bg-white rounded-full px-3 py-1 shadow">
-                    {result.person2Name}: {result.winner === result.person2Name ? result.winnerScore : result.loserScore}/10
-                  </span>
-                </div>
+                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white/70">
+                  {modeLabel} mode
+                </span>
               </div>
-              <p className="text-gray-700 leading-relaxed">{result.analysis}</p>
+              <div className="flex flex-wrap gap-2 text-sm text-white/80">
+                <span className="rounded-lg bg-white/10 px-3 py-1">
+                  {result.person1Name}:{" "}
+                  {result.winner === result.person1Name
+                    ? result.winnerScore
+                    : result.loserScore}
+                  /10
+                </span>
+                <span className="rounded-lg bg-white/10 px-3 py-1">
+                  {result.person2Name}:{" "}
+                  {result.winner === result.person2Name
+                    ? result.winnerScore
+                    : result.loserScore}
+                  /10
+                </span>
+              </div>
+              <p className="text-white/80 leading-relaxed">{result.analysis}</p>
             </section>
           )}
 
-          <section className="grid md:grid-cols-2 gap-4">
-            <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+          <section className="mt-6 grid md:grid-cols-2 gap-4">
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-gray-900">Recent History</h3>
-                <span className="text-xs text-gray-500">
-                  Last {historyPreview.length} entries
+                <h3 className="font-semibold">Recent history</h3>
+                <span className="text-xs text-white/60">
+                  Last {historyPreview.length || 0}
                 </span>
               </div>
               {historyPreview.length === 0 ? (
-                <p className="text-sm text-gray-500">No debates yet.</p>
+                <p className="text-sm text-white/60">No debates yet.</p>
               ) : (
-                <ul className="space-y-2 text-sm text-gray-700">
+                <ul className="space-y-2 text-sm text-white/80">
                   {historyPreview.map((item) => (
                     <li
                       key={item.id}
-                      className="rounded-lg border border-gray-100 px-3 py-2"
+                      className="rounded-lg border border-white/10 px-3 py-2"
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-semibold">{item.winner}</span>
-                        <span className="text-xs uppercase text-gray-500">
+                        <span className="text-xs uppercase text-white/60">
                           {item.mode}
                         </span>
                       </div>
-                      <p className="text-gray-600 text-sm">
+                      <p className="text-white/70 text-sm overflow-hidden text-ellipsis whitespace-nowrap">
                         {item.analysis}
                       </p>
                     </li>
@@ -270,22 +272,22 @@ function App() {
               )}
             </div>
 
-            <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-gray-900">Scoreboard</h3>
-                <span className="text-xs text-gray-500">Wins / Losses</span>
+                <h3 className="font-semibold">Scoreboard</h3>
+                <span className="text-xs text-white/60">Wins / Losses</span>
               </div>
               {Object.keys(scoreboard).length === 0 ? (
-                <p className="text-sm text-gray-500">No stats yet.</p>
+                <p className="text-sm text-white/60">No stats yet.</p>
               ) : (
-                <ul className="space-y-2 text-sm text-gray-700">
+                <ul className="space-y-2 text-sm text-white/80">
                   {Object.entries(scoreboard).map(([name, stats]) => (
                     <li
                       key={name}
-                      className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2"
+                      className="flex items-center justify-between rounded-lg border border-white/10 px-3 py-2"
                     >
                       <span className="font-semibold">{name}</span>
-                      <span className="text-xs text-gray-600">
+                      <span className="text-xs text-white/70">
                         {stats.wins}W / {stats.losses}L
                       </span>
                     </li>
@@ -295,7 +297,7 @@ function App() {
             </div>
           </section>
         </div>
-        <p className="text-center text-xs text-white/90 mt-4">
+        <p className="text-center text-xs text-white/60">
           For entertainment and self-improvement only.
         </p>
       </div>
