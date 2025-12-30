@@ -42,24 +42,13 @@ function App() {
     setLoading(true);
     setError("");
 
-    const grokKey = import.meta.env.VITE_GROK_API_KEY || "";
-    const claudeKey = import.meta.env.VITE_CLAUDE_API_KEY || "";
-    const apiKey = mode === "petty" ? grokKey : claudeKey;
-
-    if (!apiKey) {
-      setError("Missing API key in environment. Set VITE_GROK_API_KEY and/or VITE_CLAUDE_API_KEY.");
-      setLoading(false);
-      return;
-    }
-
     try {
       const raw = await analyzeDebate(
         mode,
         name1 || "Person 1",
         text1,
         name2 || "Person 2",
-        text2,
-        apiKey
+        text2
       );
 
       const parsed = parseAIResponse(raw) || {
