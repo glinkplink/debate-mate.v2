@@ -7,7 +7,7 @@ export async function analyzeDebate(
   person2Name,
   person2Argument
 ) {
-  const endpoint = mode === "petty" ? "/api/analyze/grok" : "/api/analyze/claude";
+  const endpoint = mode === "petty" ? "/api/grok" : "/api/claude";
 
   const response = await fetch(endpoint, {
     method: "POST",

@@ -78,8 +78,14 @@ export default async function handler(req, res) {
 
   // Check API key (never expose in errors)
   const apiKey = process.env.CLAUDE_API_KEY;
-  if (!apiKey || apiKey.trim() === "") {
-    console.error("CLAUDE_API_KEY environment variable is not set");
+  if (!apiKey || apiKey.trim() === "" || apiKey === "your-claude-api-key-here" || apiKey.includes("placeholder")) {
+    console.error("CLAUDE_API_KEY environment variable is not set or is a placeholder");
+    return res.status(500).json({ error: "Service configuration error" });
+  }
+  
+  // Additional validation: ensure API key format is reasonable (Anthropic keys typically start with sk-ant-)
+  if (!apiKey.startsWith("sk-ant-") && apiKey.length < 20) {
+    console.error("CLAUDE_API_KEY appears to be invalid format");
     return res.status(500).json({ error: "Service configuration error" });
   }
 

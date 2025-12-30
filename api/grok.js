@@ -87,8 +87,14 @@ export default async function handler(req, res) {
 
   // Check API key (never expose in errors)
   const apiKey = process.env.GROK_API_KEY;
-  if (!apiKey || apiKey.trim() === "") {
-    console.error("GROK_API_KEY environment variable is not set");
+  if (!apiKey || apiKey.trim() === "" || apiKey === "your-grok-api-key-here" || apiKey.includes("placeholder")) {
+    console.error("GROK_API_KEY environment variable is not set or is a placeholder");
+    return res.status(500).json({ error: "Service configuration error" });
+  }
+  
+  // Additional validation: ensure API key format is reasonable (xAI keys typically start with xai-)
+  if (!apiKey.startsWith("xai-") && apiKey.length < 20) {
+    console.error("GROK_API_KEY appears to be invalid format");
     return res.status(500).json({ error: "Service configuration error" });
   }
 

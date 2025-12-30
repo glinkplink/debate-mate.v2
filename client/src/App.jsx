@@ -7,6 +7,8 @@ import {
   saveDebateResult,
 } from "./lib/debateUtils";
 import { sanitizeInput, validateInputLength, checkRateLimit } from "./lib/security";
+import SocialShareBar from "./components/SocialShareBar";
+import ExportBar from "./components/ExportBar";
 
 function App() {
   const [mode, setMode] = useState("petty");
@@ -284,6 +286,13 @@ function App() {
               </div>
               <p className="text-white/80 leading-relaxed">{result.analysis}</p>
             </section>
+          )}
+
+          {result && (
+            <>
+              {mode === "petty" && <SocialShareBar result={result} mode={mode} />}
+              {mode === "productive" && <ExportBar result={result} mode={mode} />}
+            </>
           )}
 
           <section className={`mt-6 grid gap-4 ${mode === "petty" ? "md:grid-cols-2" : "md:grid-cols-1"}`}>

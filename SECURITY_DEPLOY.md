@@ -2,9 +2,14 @@
 
 ## ✅ Security Fixes Applied
 
-1. ✅ **API Key Security**: Moved to server-side only (no client exposure)
+1. ✅ **API Key Security**: Server-side validation with placeholder detection
+   - Checks for `your-grok-api-key-here`, `your-claude-api-key-here`, or `placeholder`
+   - Format validation (Grok: `xai-*`, Claude: `sk-ant-*`)
+   - Prevents deployment with invalid keys
 2. ✅ **Input Sanitization**: DOMPurify installed and applied to all user inputs
-3. ✅ **CSP Headers**: Strict Content Security Policy configured in vercel.json
+3. ✅ **CSP Headers**: Enhanced Content Security Policy in vercel.json
+   - Added `object-src 'none'` to prevent plugin execution
+   - Added `upgrade-insecure-requests` for HTTPS enforcement
 4. ✅ **Rate Limiting**: Client-side rate limiting (5 requests/minute per browser)
 5. ✅ **Input Validation**: 500 char max for arguments, 50 char max for names
 6. ✅ **Error Handling**: No API keys or sensitive data leaked in error messages
