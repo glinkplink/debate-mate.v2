@@ -3,8 +3,9 @@ const MAX_NAME_LENGTH = 50;
 
 function sanitizeString(str) {
   if (typeof str !== "string") return "";
-  // Remove any HTML tags and dangerous characters
-  return str.replace(/<[^>]*>/g, "").trim();
+  // Only remove HTML tags to prevent XSS - preserve all other content
+  // The AI models can handle any text content, including inappropriate language
+  return str.replace(/<[^>]*>/g, "");
 }
 
 function validateInputs(person1Name, person1Argument, person2Name, person2Argument) {
@@ -38,13 +39,19 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // Sanitize inputs
-  const person1Name = sanitizeString(req.body.person1Name || "");
-  const person1Argument = sanitizeString(req.body.person1Argument || "");
-  const person2Name = sanitizeString(req.body.person2Name || "");
-  const person2Argument = sanitizeString(req.body.person2Argument || "");
+  // Sanitize inputs - only remove HTML/XSS, preserve all text content
+  let person1Name = req.body.person1Name || "";
+  let person1Argument = req.body.person1Argument || "";
+  let person2Name = req.body.person2Name || "";
+  let person2Argument = req.body.person2Argument || "";
 
-  // Validate inputs
+  // Only sanitize if they're strings (prevent XSS)
+  if (typeof person1Name === "string") person1Name = sanitizeString(person1Name);
+  if (typeof person1Argument === "string") person1Argument = sanitizeString(person1Argument);
+  if (typeof person2Name === "string") person2Name = sanitizeString(person2Name);
+  if (typeof person2Argument === "string") person2Argument = sanitizeString(person2Argument);
+
+  // Validate inputs - only check for required fields and length, not content
   const validationErrors = validateInputs(person1Name, person1Argument, person2Name, person2Argument);
   if (validationErrors.length > 0) {
     return res.status(400).json({ error: validationErrors.join("; ") });
@@ -71,21 +78,29 @@ ${person2Name || "Person 2"}'s argument: "${person2Argument}"
 Who made the stronger argument?`;
 
   try {
+    const requestBody = {
+      model: "grok-beta",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      temperature: 0.7,
+      max_tokens: 500,
+    };
+
+    // Log request (without API key) for debugging
+    console.log("Grok API request:", JSON.stringify({
+      ...requestBody,
+      messages: requestBody.messages.map(m => ({ role: m.role, contentLength: m.content.length }))
+    }));
+
     const response = await fetch("https://api.x.ai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model: "grok-beta",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.7,
-        max_tokens: 500,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
@@ -108,8 +123,11 @@ Who made the stronger argument?`;
         errorMessage = "Rate limit exceeded. Please try again later.";
       } else if (status >= 500) {
         errorMessage = "Service temporarily unavailable";
+      } else if (status === 400) {
+        // 400 from Grok API - might be content-related, but we pass through everything
+        errorMessage = "Unable to process request. Please try again.";
       } else {
-        errorMessage = "Invalid request";
+        errorMessage = "Request failed. Please try again.";
       }
 
       return res.status(status).json({ error: errorMessage });

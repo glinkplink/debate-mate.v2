@@ -7,10 +7,17 @@ const RATE_LIMIT_KEY = "debate_mate_rate_limit";
 
 /**
  * Sanitize user input to prevent XSS attacks
+ * Only removes HTML/XSS threats - preserves all text content including inappropriate language
+ * AI models can handle any text content
  */
 export function sanitizeInput(input) {
   if (typeof input !== "string") return "";
-  return DOMPurify.sanitize(input, { ALLOWED_TAGS: [] });
+  // Use DOMPurify with minimal config - only remove dangerous HTML, preserve all text
+  return DOMPurify.sanitize(input, { 
+    ALLOWED_TAGS: [],
+    ALLOWED_ATTR: [],
+    KEEP_CONTENT: true // Preserve all text content
+  });
 }
 
 /**
