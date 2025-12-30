@@ -5,6 +5,9 @@ import {
   getScoreboard,
   parseAIResponse,
   saveDebateResult,
+  saveToHistory,
+  getUnifiedHistory,
+  getMostFoughtTopic,
 } from "./lib/debateUtils";
 import { sanitizeInput, validateInputLength, checkRateLimit } from "./lib/security";
 import SocialShareBar from "./components/SocialShareBar";
@@ -21,11 +24,17 @@ function App() {
   const [result, setResult] = useState(null);
   const [history, setHistory] = useState(() => getDebateHistory());
   const [scoreboard, setScoreboard] = useState(() => getScoreboard());
+  const [historyExpanded, setHistoryExpanded] = useState(false);
 
   useEffect(() => {
     setHistory(getDebateHistory());
     setScoreboard(getScoreboard());
   }, []);
+
+  const unifiedHistory = useMemo(() => getUnifiedHistory(), [history, result]);
+  const historyCount = unifiedHistory.length;
+  const showPaywall = historyCount >= 10;
+  const mostFoughtTopic = useMemo(() => getMostFoughtTopic(), [historyCount]);
 
   const modeLabel = mode === "petty" ? "Petty" : "Productive";
   const accent =
@@ -42,7 +51,10 @@ function App() {
     text1.length > MAX_LENGTH ||
     text2.length > MAX_LENGTH;
 
-  const historyPreview = useMemo(() => history.slice(0, 5), [history]);
+  const historyPreview = useMemo(() => {
+    const unified = getUnifiedHistory();
+    return unified.slice(0, 5);
+  }, [unifiedHistory]);
 
   const handleAnalyze = async () => {
     if (disableAnalyze) return;
@@ -105,7 +117,14 @@ function App() {
       };
 
       saveDebateResult(resultEntry);
+      
+      // Save to unified history
+      const inputText = `${name1 || "Person 1"}: ${text1} vs ${name2 || "Person 2"}: ${text2}`;
+      const resultText = `${winnerName} wins (${winnerScore}/10 vs ${loserScore}/10). ${parsed.analysis || "No detailed analysis provided."}`;
+      saveToHistory(mode, inputText, resultText);
+      
       setResult(resultEntry);
+      // Refresh both history formats
       setHistory(getDebateHistory());
       setScoreboard(getScoreboard());
     } catch (err) {
@@ -299,31 +318,152 @@ function App() {
             <div className="rounded-xl border border-white/10 bg-white/5 p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold">Recent history</h3>
-                <span className="text-xs text-white/60">
-                  Last {historyPreview.length || 0}
-                </span>
+                {historyCount > 5 && (
+                  <button
+                    onClick={() => setHistoryExpanded(!historyExpanded)}
+                    className="text-xs text-white/60 hover:text-white/80 transition"
+                  >
+                    {historyExpanded ? "Collapse" : `View ${historyCount} squabbles`}
+                  </button>
+                )}
               </div>
+              
+              {showPaywall && !historyExpanded && (
+                <div className="mb-3 rounded-lg border border-orange-500/30 bg-gradient-to-r from-orange-500/10 to-pink-500/10 p-3">
+                  <p className="text-sm font-semibold text-white mb-1">
+                    Unlock insights + unlimited - $19/mo
+                  </p>
+                  {mostFoughtTopic && (
+                    <p className="text-xs text-white/70">
+                      Your most fought topic: <span className="font-semibold">{mostFoughtTopic}</span>
+                    </p>
+                  )}
+                </div>
+              )}
+              
               {historyPreview.length === 0 ? (
                 <p className="text-sm text-white/60">No debates yet.</p>
               ) : (
-                <ul className="space-y-2 text-sm text-white/80">
-                  {historyPreview.map((item) => (
-                    <li
-                      key={item.id}
-                      className="rounded-lg border border-white/10 px-3 py-2"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold">{item.winner}</span>
-                        <span className="text-xs uppercase text-white/60">
-                          {item.mode}
-                        </span>
-                      </div>
-                      <p className="text-white/70 text-sm overflow-hidden text-ellipsis whitespace-nowrap">
-                        {item.analysis}
+                <>
+                  <ul className="space-y-2 text-sm text-white/80">
+                    {historyPreview.map((item) => {
+                      const isSquabble = item.type === 'squabble' || item.mode === 'petty';
+                      const isProductive = item.type === 'productive' || item.mode === 'productive';
+                      
+                      // Parse score from various formats
+                      let score = item.score;
+                      if (!score && isProductive) {
+                        if (item.winnerScore) {
+                          score = `${item.winnerScore}/10`;
+                        } else if (item.result) {
+                          const scoreMatch = item.result.match(/(\d+)\s*\/\s*10/i);
+                          if (scoreMatch) {
+                            score = `${scoreMatch[1]}/10`;
+                          }
+                        }
+                      }
+                      
+                      // Get display text
+                      const displayText = item.result || item.analysis || item.input || 'No details';
+                      const displayDate = item.date || (item.timestamp ? new Date(item.timestamp).toLocaleString() : null);
+                      
+                      return (
+                        <li
+                          key={item.id || item.timestamp}
+                          className="rounded-lg border border-white/10 px-3 py-2"
+                        >
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <div className="flex items-center gap-2">
+                              {isSquabble && <span className="text-xs">🥊</span>}
+                              {isProductive && <span className="text-xs">💔</span>}
+                              <span className="font-semibold text-xs">
+                                {isSquabble ? "Petty" : "Productive"}
+                              </span>
+                            </div>
+                            {score && (
+                              <span className="text-xs text-white/70 font-semibold">
+                                {score}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-white/70 text-sm overflow-hidden text-ellipsis line-clamp-2">
+                            {displayText}
+                          </p>
+                          {displayDate && (
+                            <p className="text-xs text-white/50 mt-1">{displayDate}</p>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  
+                  {historyExpanded && historyCount > 5 && (
+                    <ul className="space-y-2 text-sm text-white/80 mt-3">
+                      {unifiedHistory.slice(5).map((item) => {
+                        const isSquabble = item.type === 'squabble' || item.mode === 'petty';
+                        const isProductive = item.type === 'productive' || item.mode === 'productive';
+                        
+                        // Parse score from various formats
+                        let score = item.score;
+                        if (!score && isProductive) {
+                          if (item.winnerScore) {
+                            score = `${item.winnerScore}/10`;
+                          } else if (item.result) {
+                            const scoreMatch = item.result.match(/(\d+)\s*\/\s*10/i);
+                            if (scoreMatch) {
+                              score = `${scoreMatch[1]}/10`;
+                            }
+                          }
+                        }
+                        
+                        // Get display text
+                        const displayText = item.result || item.analysis || item.input || 'No details';
+                        const displayDate = item.date || (item.timestamp ? new Date(item.timestamp).toLocaleString() : null);
+                        
+                        return (
+                          <li
+                            key={item.id || item.timestamp}
+                            className="rounded-lg border border-white/10 px-3 py-2"
+                          >
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <div className="flex items-center gap-2">
+                                {isSquabble && <span className="text-xs">🥊</span>}
+                                {isProductive && <span className="text-xs">💔</span>}
+                                <span className="font-semibold text-xs">
+                                  {isSquabble ? "Petty" : "Productive"}
+                                </span>
+                              </div>
+                              {score && (
+                                <span className="text-xs text-white/70 font-semibold">
+                                  {score}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-white/70 text-sm overflow-hidden text-ellipsis line-clamp-2">
+                              {displayText}
+                            </p>
+                            {displayDate && (
+                              <p className="text-xs text-white/50 mt-1">{displayDate}</p>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                  
+                  {showPaywall && historyExpanded && (
+                    <div className="mt-3 rounded-lg border border-orange-500/30 bg-gradient-to-r from-orange-500/10 to-pink-500/10 p-3">
+                      <p className="text-sm font-semibold text-white mb-1">
+                        Unlock insights + unlimited - $19/mo
                       </p>
-                    </li>
-                  ))}
-                </ul>
+                      {mostFoughtTopic && (
+                        <p className="text-xs text-white/70">
+                          Your most fought topic: <span className="font-semibold">{mostFoughtTopic}</span>
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 

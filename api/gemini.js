@@ -87,15 +87,31 @@ export default async function handler(req, res) {
 
   // Check API key (never expose in errors)
   const apiKey = process.env.GEMINI_API_KEY;
+  
+  // Debug logging (server-side only)
+  console.log("GEMINI_API_KEY check:", {
+    exists: !!apiKey,
+    length: apiKey ? apiKey.length : 0,
+    isPlaceholder: apiKey === "your-gemini-api-key-here" || (apiKey && apiKey.includes("placeholder")),
+    firstChars: apiKey ? apiKey.substring(0, 5) + "..." : "none"
+  });
+  
   if (!apiKey || apiKey.trim() === "" || apiKey === "your-gemini-api-key-here" || apiKey.includes("placeholder")) {
     console.error("GEMINI_API_KEY environment variable is not set or is a placeholder");
-    return res.status(500).json({ error: "Service configuration error" });
+    console.error("Available env vars:", Object.keys(process.env).filter(k => k.includes("GEMINI") || k.includes("API")));
+    return res.status(500).json({ 
+      error: "Service configuration error",
+      hint: "GEMINI_API_KEY environment variable is missing or invalid. Please set it in Vercel dashboard."
+    });
   }
   
   // Additional validation: ensure API key format is reasonable (Google API keys are typically 39+ characters)
   if (apiKey.length < 20) {
-    console.error("GEMINI_API_KEY appears to be invalid format");
-    return res.status(500).json({ error: "Service configuration error" });
+    console.error("GEMINI_API_KEY appears to be invalid format (length:", apiKey.length, ")");
+    return res.status(500).json({ 
+      error: "Service configuration error",
+      hint: "GEMINI_API_KEY must be at least 20 characters long."
+    });
   }
 
   const systemPrompt = `You are a sarcastic debate referee with humor. Judge arguments but keep it entertaining. Be witty but not mean. Focus on funny observations while being fair.
@@ -113,9 +129,7 @@ Who made the stronger argument?`;
 
   try {
     // Gemini API uses generateContent endpoint with model name in URL
-    // Using gemini-2.0-flash-exp as fallback (gemini-2.5-flash may not be available yet)
-    // Try gemini-2.5-flash first, fallback to gemini-2.0-flash-exp if it fails
-    const modelName = "gemini-2.0-flash-exp"; // Update to "gemini-2.5-flash" when available
+    const modelName = "gemini-1.5-flash-latest";
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
     const requestBody = {

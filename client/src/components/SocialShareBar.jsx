@@ -1,10 +1,4 @@
 import React, { useState } from "react";
-import {
-  FacebookShareButton,
-  TwitterShareButton,
-  FacebookIcon,
-  TwitterIcon,
-} from "react-share";
 
 export default function SocialShareBar({ result, mode }) {
   const [copied, setCopied] = useState(false);
@@ -32,36 +26,17 @@ export default function SocialShareBar({ result, mode }) {
     }
   };
 
-  const handleWebShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: "Debate Mate - Petty Mode",
-          text: shareText,
-          url: shareUrl,
-        });
-      } catch (err) {
-        if (err.name !== "AbortError") {
-          setShareError("Share failed");
-          setTimeout(() => setShareError(""), 3000);
-        }
-      }
-    } else {
-      // Fallback to copy
-      handleCopyLink();
-    }
-  };
-
-  const handleTikTok = () => {
+  const handleTikTok = async () => {
     // TikTok doesn't have a direct share API, so we copy text for user to paste
     const tiktokText = `${shareText}\n\n${result.analysis}`;
-    navigator.clipboard.writeText(tiktokText).then(() => {
+    try {
+      await navigator.clipboard.writeText(tiktokText);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    }).catch(() => {
+    } catch (err) {
       setShareError("Failed to copy");
       setTimeout(() => setShareError(""), 3000);
-    });
+    }
   };
 
   const handleXPost = () => {
@@ -69,17 +44,15 @@ export default function SocialShareBar({ result, mode }) {
     window.open(xUrl, "_blank", "noopener,noreferrer");
   };
 
+  const handleFacebook = () => {
+    // FacebookShareButton should handle this, but we'll ensure it works
+    const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`;
+    window.open(fbUrl, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-4">
       <div className="flex flex-wrap items-center gap-3">
-        <button
-          onClick={handleWebShare}
-          className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10 transition"
-          title="Share Roast"
-        >
-          📱 Share Roast
-        </button>
-        
         <button
           onClick={handleCopyLink}
           className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10 transition"
@@ -104,25 +77,13 @@ export default function SocialShareBar({ result, mode }) {
           🐦 X Post
         </button>
 
-        <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10 transition">
-          <TwitterShareButton
-            url={shareUrl}
-            title={shareText}
-            className="flex items-center"
-          >
-            <TwitterIcon size={20} round />
-          </TwitterShareButton>
-        </div>
-
-        <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10 transition">
-          <FacebookShareButton
-            url={shareUrl}
-            quote={shareText}
-            className="flex items-center"
-          >
-            <FacebookIcon size={20} round />
-          </FacebookShareButton>
-        </div>
+        <button
+          onClick={handleFacebook}
+          className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10 transition"
+          title="Share on Facebook"
+        >
+          📘 Facebook
+        </button>
       </div>
       {shareError && (
         <p className="mt-2 text-xs text-red-400">{shareError}</p>

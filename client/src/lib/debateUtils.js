@@ -14,6 +14,68 @@ export function saveDebateResult(result) {
   updateScoreboard(result);
 }
 
+// Unified history function for both modes
+export function saveToHistory(type, input, result) {
+  const history = getDebateHistory();
+  
+  // Parse score from result if it's productive mode
+  // Look for patterns like "7/10" or "wins (7/10 vs 5/10)"
+  let score = null;
+  if (type === 'productive' && result) {
+    // Try to find "X/10" pattern
+    const scoreMatch = result.match(/(\d+)\s*\/\s*10/i);
+    if (scoreMatch) {
+      score = `${scoreMatch[1]}/10`;
+    }
+    // Also try to find "wins (X/10 vs Y/10)" pattern
+    const winsMatch = result.match(/wins\s*\((\d+)\s*\/\s*10/i);
+    if (winsMatch) {
+      score = `${winsMatch[1]}/10`;
+    }
+  }
+  
+  const entry = {
+    id: Date.now(),
+    type: type === 'petty' ? 'squabble' : 'productive',
+    input: input,
+    result: result,
+    date: new Date().toLocaleString(),
+    timestamp: Date.now(),
+    score: score
+  };
+  
+  history.unshift(entry);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 50)));
+}
+
+// Get unified history (both modes combined)
+export function getUnifiedHistory() {
+  const stored = safeParse(localStorage.getItem(HISTORY_KEY), []);
+  return stored.sort((a, b) => (b.timestamp || b.id || 0) - (a.timestamp || a.id || 0));
+}
+
+// Get most common word from history entries
+export function getMostFoughtTopic() {
+  const history = getUnifiedHistory();
+  const wordCount = {};
+  
+  history.forEach(entry => {
+    if (entry.input) {
+      const words = entry.input.toLowerCase()
+        .replace(/[^\w\s]/g, ' ')
+        .split(/\s+/)
+        .filter(w => w.length > 3); // Only words longer than 3 chars
+      
+      words.forEach(word => {
+        wordCount[word] = (wordCount[word] || 0) + 1;
+      });
+    }
+  });
+  
+  const sorted = Object.entries(wordCount).sort((a, b) => b[1] - a[1]);
+  return sorted.length > 0 ? sorted[0][0] : null;
+}
+
 export function getScoreboard() {
   return safeParse(localStorage.getItem(SCOREBOARD_KEY), {});
 }
