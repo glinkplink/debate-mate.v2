@@ -92,11 +92,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Service configuration error" });
   }
   
-  // Additional validation: ensure API key format is reasonable (xAI keys typically start with xai-)
-  if (!apiKey.startsWith("xai-") && apiKey.length < 20) {
-    console.error("GROK_API_KEY appears to be invalid format");
-    return res.status(500).json({ error: "Service configuration error" });
-  }
+  // Note: API key format validation removed - xAI keys can vary in format
 
   const systemPrompt = `You are a sarcastic debate referee with humor. Judge arguments but keep it entertaining. Be witty but not mean. Focus on funny observations while being fair.
 
@@ -113,7 +109,7 @@ Who made the stronger argument?`;
 
   try {
     const requestBody = {
-      model: "grok-3-mini",
+      model: "grok-beta",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
