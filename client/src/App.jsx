@@ -6,6 +6,7 @@ import {
   parseAIResponse,
   saveDebateResult,
 } from "./lib/debateUtils";
+import { sanitizeInput, validateInputLength, checkRateLimit } from "./lib/security";
 
 function App() {
   const [mode, setMode] = useState("petty");
@@ -30,25 +31,49 @@ function App() {
       ? "from-orange-500 to-pink-500"
       : "from-indigo-500 to-sky-500";
 
+  const MAX_LENGTH = 500;
+  
   const disableAnalyze =
     loading ||
     !text1.trim() ||
-    !text2.trim();
+    !text2.trim() ||
+    text1.length > MAX_LENGTH ||
+    text2.length > MAX_LENGTH;
 
   const historyPreview = useMemo(() => history.slice(0, 5), [history]);
 
   const handleAnalyze = async () => {
     if (disableAnalyze) return;
+
+    // Check rate limit
+    const rateLimit = checkRateLimit();
+    if (!rateLimit.allowed) {
+      setError(rateLimit.message || "Rate limit exceeded. Please wait before trying again.");
+      return;
+    }
+
     setLoading(true);
     setError("");
+
+    // Sanitize and validate inputs
+    const sanitizedName1 = sanitizeInput(name1 || "Person 1");
+    const sanitizedName2 = sanitizeInput(name2 || "Person 2");
+    const sanitizedText1 = validateInputLength(text1, MAX_LENGTH);
+    const sanitizedText2 = validateInputLength(text2, MAX_LENGTH);
+
+    if (!sanitizedText1.trim() || !sanitizedText2.trim()) {
+      setError("Please provide valid arguments for both perspectives.");
+      setLoading(false);
+      return;
+    }
 
     try {
       const raw = await analyzeDebate(
         mode,
-        name1 || "Person 1",
-        text1,
-        name2 || "Person 2",
-        text2
+        sanitizedName1,
+        sanitizedText1,
+        sanitizedName2,
+        sanitizedText2
       );
 
       const parsed = parseAIResponse(raw) || {
@@ -141,20 +166,30 @@ function App() {
               </label>
               <input
                 value={name1}
-                onChange={(e) => setName1(e.target.value)}
+                onChange={(e) => {
+                  const sanitized = sanitizeInput(e.target.value);
+                  setName1(sanitized.slice(0, 50)); // Limit name length
+                }}
                 onKeyDown={handleKeyDown}
                 placeholder="Person 1 (optional)"
+                maxLength={50}
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
               />
               <label className="text-xs uppercase tracking-wide text-white/60">
-                Perspective 1
+                Perspective 1 {text1.length > MAX_LENGTH && (
+                  <span className="text-red-400">({text1.length}/{MAX_LENGTH})</span>
+                )}
               </label>
               <textarea
                 value={text1}
-                onChange={(e) => setText1(e.target.value)}
+                onChange={(e) => {
+                  const sanitized = validateInputLength(e.target.value, MAX_LENGTH);
+                  setText1(sanitized);
+                }}
                 onKeyDown={handleKeyDown}
                 placeholder="Their argument..."
                 rows={6}
+                maxLength={MAX_LENGTH}
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
               />
             </div>
@@ -165,20 +200,30 @@ function App() {
               </label>
               <input
                 value={name2}
-                onChange={(e) => setName2(e.target.value)}
+                onChange={(e) => {
+                  const sanitized = sanitizeInput(e.target.value);
+                  setName2(sanitized.slice(0, 50)); // Limit name length
+                }}
                 onKeyDown={handleKeyDown}
                 placeholder="Person 2 (optional)"
+                maxLength={50}
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
               />
               <label className="text-xs uppercase tracking-wide text-white/60">
-                Perspective 2
+                Perspective 2 {text2.length > MAX_LENGTH && (
+                  <span className="text-red-400">({text2.length}/{MAX_LENGTH})</span>
+                )}
               </label>
               <textarea
                 value={text2}
-                onChange={(e) => setText2(e.target.value)}
+                onChange={(e) => {
+                  const sanitized = validateInputLength(e.target.value, MAX_LENGTH);
+                  setText2(sanitized);
+                }}
                 onKeyDown={handleKeyDown}
                 placeholder="Their argument..."
                 rows={6}
+                maxLength={MAX_LENGTH}
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
               />
             </div>

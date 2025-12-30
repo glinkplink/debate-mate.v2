@@ -1,17 +1,60 @@
+const MAX_INPUT_LENGTH = 500;
+const MAX_NAME_LENGTH = 50;
+
+function sanitizeString(str) {
+  if (typeof str !== "string") return "";
+  // Remove any HTML tags and dangerous characters
+  return str.replace(/<[^>]*>/g, "").trim();
+}
+
+function validateInputs(person1Name, person1Argument, person2Name, person2Argument) {
+  const errors = [];
+
+  if (!person1Argument || typeof person1Argument !== "string" || !person1Argument.trim()) {
+    errors.push("Person 1 argument is required");
+  } else if (person1Argument.length > MAX_INPUT_LENGTH) {
+    errors.push(`Person 1 argument exceeds ${MAX_INPUT_LENGTH} characters`);
+  }
+
+  if (!person2Argument || typeof person2Argument !== "string" || !person2Argument.trim()) {
+    errors.push("Person 2 argument is required");
+  } else if (person2Argument.length > MAX_INPUT_LENGTH) {
+    errors.push(`Person 2 argument exceeds ${MAX_INPUT_LENGTH} characters`);
+  }
+
+  if (person1Name && person1Name.length > MAX_NAME_LENGTH) {
+    errors.push(`Person 1 name exceeds ${MAX_NAME_LENGTH} characters`);
+  }
+
+  if (person2Name && person2Name.length > MAX_NAME_LENGTH) {
+    errors.push(`Person 2 name exceeds ${MAX_NAME_LENGTH} characters`);
+  }
+
+  return errors;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { person1Name, person1Argument, person2Name, person2Argument } = req.body;
+  // Sanitize inputs
+  const person1Name = sanitizeString(req.body.person1Name || "");
+  const person1Argument = sanitizeString(req.body.person1Argument || "");
+  const person2Name = sanitizeString(req.body.person2Name || "");
+  const person2Argument = sanitizeString(req.body.person2Argument || "");
 
-  if (!person1Argument || !person2Argument) {
-    return res.status(400).json({ error: "Both arguments are required" });
+  // Validate inputs
+  const validationErrors = validateInputs(person1Name, person1Argument, person2Name, person2Argument);
+  if (validationErrors.length > 0) {
+    return res.status(400).json({ error: validationErrors.join("; ") });
   }
 
+  // Check API key (never expose in errors)
   const apiKey = process.env.GROK_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: "Grok API key not configured" });
+  if (!apiKey || apiKey.trim() === "") {
+    console.error("GROK_API_KEY environment variable is not set");
+    return res.status(500).json({ error: "Service configuration error" });
   }
 
   const systemPrompt = `You are a sarcastic debate referee with humor. Judge arguments but keep it entertaining. Be witty but not mean. Focus on funny observations while being fair.
@@ -46,21 +89,47 @@ Who made the stronger argument?`;
     });
 
     if (!response.ok) {
-      const text = await response.text();
-      return res.status(response.status).json({
-        error: `Grok API error: ${response.status}`,
-        details: text,
-      });
+      // Never expose API keys or sensitive details in error messages
+      const status = response.status;
+      let errorMessage = "Failed to analyze debate";
+      
+      // Log full error server-side only (not exposed to client)
+      try {
+        const errorText = await response.text();
+        console.error(`Grok API error ${status}:`, errorText.substring(0, 200)); // Log truncated
+      } catch {
+        console.error(`Grok API error ${status}: Unable to read error response`);
+      }
+
+      // Return generic error to client
+      if (status === 401 || status === 403) {
+        errorMessage = "Authentication failed";
+      } else if (status === 429) {
+        errorMessage = "Rate limit exceeded. Please try again later.";
+      } else if (status >= 500) {
+        errorMessage = "Service temporarily unavailable";
+      } else {
+        errorMessage = "Invalid request";
+      }
+
+      return res.status(status).json({ error: errorMessage });
     }
 
     const data = await response.json();
     const content = data?.choices?.[0]?.message?.content || "";
 
+    // Validate response doesn't contain sensitive data
+    if (content.toLowerCase().includes("api") && content.toLowerCase().includes("key")) {
+      console.error("Response may contain sensitive data - sanitizing");
+      return res.status(500).json({ error: "Invalid response format" });
+    }
+
     return res.status(200).json({ content });
   } catch (error) {
+    // Never expose error details that might contain API keys
+    console.error("Grok API handler error:", error.message);
     return res.status(500).json({
-      error: "Failed to analyze debate",
-      details: error.message,
+      error: "An error occurred while processing your request",
     });
   }
 }
