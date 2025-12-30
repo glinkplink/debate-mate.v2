@@ -110,6 +110,14 @@ function App() {
     setResult(null);
   };
 
+  const handleKeyDown = (e) => {
+    // Enter without Shift triggers analyze
+    if (e.key === "Enter" && !e.shiftKey && !disableAnalyze) {
+      e.preventDefault();
+      handleAnalyze();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-800 text-white flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-5xl space-y-4">
@@ -145,6 +153,7 @@ function App() {
               <input
                 value={name1}
                 onChange={(e) => setName1(e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="Person 1 (optional)"
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
               />
@@ -154,6 +163,7 @@ function App() {
               <textarea
                 value={text1}
                 onChange={(e) => setText1(e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="Their argument..."
                 rows={6}
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
@@ -167,6 +177,7 @@ function App() {
               <input
                 value={name2}
                 onChange={(e) => setName2(e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="Person 2 (optional)"
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
               />
@@ -176,6 +187,7 @@ function App() {
               <textarea
                 value={text2}
                 onChange={(e) => setText2(e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="Their argument..."
                 rows={6}
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
@@ -240,7 +252,7 @@ function App() {
             </section>
           )}
 
-          <section className="mt-6 grid md:grid-cols-2 gap-4">
+          <section className={`mt-6 grid gap-4 ${mode === "petty" ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
             <div className="rounded-xl border border-white/10 bg-white/5 p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold">Recent history</h3>
@@ -272,29 +284,31 @@ function App() {
               )}
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-white/5 p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold">Scoreboard</h3>
-                <span className="text-xs text-white/60">Wins / Losses</span>
+            {mode === "petty" && (
+              <div className="rounded-xl border border-white/10 bg-white/5 p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold">Scoreboard</h3>
+                  <span className="text-xs text-white/60">Wins / Losses</span>
+                </div>
+                {Object.keys(scoreboard).length === 0 ? (
+                  <p className="text-sm text-white/60">No stats yet.</p>
+                ) : (
+                  <ul className="space-y-2 text-sm text-white/80">
+                    {Object.entries(scoreboard).map(([name, stats]) => (
+                      <li
+                        key={name}
+                        className="flex items-center justify-between rounded-lg border border-white/10 px-3 py-2"
+                      >
+                        <span className="font-semibold">{name}</span>
+                        <span className="text-xs text-white/70">
+                          {stats.wins}W / {stats.losses}L
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
-              {Object.keys(scoreboard).length === 0 ? (
-                <p className="text-sm text-white/60">No stats yet.</p>
-              ) : (
-                <ul className="space-y-2 text-sm text-white/80">
-                  {Object.entries(scoreboard).map(([name, stats]) => (
-                    <li
-                      key={name}
-                      className="flex items-center justify-between rounded-lg border border-white/10 px-3 py-2"
-                    >
-                      <span className="font-semibold">{name}</span>
-                      <span className="text-xs text-white/70">
-                        {stats.wins}W / {stats.losses}L
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+            )}
           </section>
         </div>
         <p className="text-center text-xs text-white/60">
