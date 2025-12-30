@@ -35,15 +35,34 @@ function validateInputs(person1Name, person1Argument, person2Name, person2Argume
 }
 
 export default async function handler(req, res) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  // Parse request body if needed
+  let body = req.body;
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch (e) {
+      return res.status(400).json({ error: "Invalid JSON in request body" });
+    }
+  }
+
   // Sanitize inputs - only remove HTML/XSS, preserve all text content
-  let person1Name = req.body.person1Name || "";
-  let person1Argument = req.body.person1Argument || "";
-  let person2Name = req.body.person2Name || "";
-  let person2Argument = req.body.person2Argument || "";
+  let person1Name = body?.person1Name || "";
+  let person1Argument = body?.person1Argument || "";
+  let person2Name = body?.person2Name || "";
+  let person2Argument = body?.person2Argument || "";
 
   // Only sanitize if they're strings (prevent XSS)
   if (typeof person1Name === "string") person1Name = sanitizeString(person1Name);

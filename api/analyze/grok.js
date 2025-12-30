@@ -35,15 +35,34 @@ function validateInputs(person1Name, person1Argument, person2Name, person2Argume
 }
 
 export default async function handler(req, res) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  // Parse request body if needed
+  let body = req.body;
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch (e) {
+      return res.status(400).json({ error: "Invalid JSON in request body" });
+    }
+  }
+
   // Sanitize inputs - only remove HTML/XSS, preserve all text content
-  let person1Name = req.body.person1Name || "";
-  let person1Argument = req.body.person1Argument || "";
-  let person2Name = req.body.person2Name || "";
-  let person2Argument = req.body.person2Argument || "";
+  let person1Name = body?.person1Name || "";
+  let person1Argument = body?.person1Argument || "";
+  let person2Name = body?.person2Name || "";
+  let person2Argument = body?.person2Argument || "";
 
   // Only sanitize if they're strings (prevent XSS)
   if (typeof person1Name === "string") person1Name = sanitizeString(person1Name);
@@ -52,10 +71,19 @@ export default async function handler(req, res) {
   if (typeof person2Argument === "string") person2Argument = sanitizeString(person2Argument);
 
   // Validate inputs - only check for required fields and length, not content
+  // Allow any text content including single characters for testing
   const validationErrors = validateInputs(person1Name, person1Argument, person2Name, person2Argument);
   if (validationErrors.length > 0) {
+    console.log("Validation errors:", validationErrors);
     return res.status(400).json({ error: validationErrors.join("; ") });
   }
+
+  console.log("Processing request:", {
+    person1Name: person1Name.substring(0, 20),
+    person1Argument: person1Argument.substring(0, 20),
+    person2Name: person2Name.substring(0, 20),
+    person2Argument: person2Argument.substring(0, 20),
+  });
 
   // Check API key (never expose in errors)
   const apiKey = process.env.GROK_API_KEY;
@@ -146,6 +174,7 @@ Who made the stronger argument?`;
   } catch (error) {
     // Never expose error details that might contain API keys
     console.error("Grok API handler error:", error.message);
+    console.error("Error stack:", error.stack);
     return res.status(500).json({
       error: "An error occurred while processing your request",
     });
