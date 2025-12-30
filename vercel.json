@@ -2,14 +2,6 @@
   "buildCommand": "pnpm build",
   "installCommand": "pnpm install --no-frozen-lockfile",
   "outputDirectory": "dist",
-  "functions": {
-    "api/grok.js": {
-      "runtime": "nodejs20.x"
-    },
-    "api/claude.js": {
-      "runtime": "nodejs20.x"
-    }
-  },
   "headers": [
     {
       "source": "/(.*)",
