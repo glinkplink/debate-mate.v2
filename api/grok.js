@@ -109,7 +109,7 @@ Who made the stronger argument?`;
 
   try {
     const requestBody = {
-      model: "grok-beta",
+      model: "grok-2-1212",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
