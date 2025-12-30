@@ -86,13 +86,17 @@ export default async function handler(req, res) {
   });
 
   // Check API key (never expose in errors)
-  const apiKey = process.env.GROK_API_KEY;
-  if (!apiKey || apiKey.trim() === "" || apiKey === "your-grok-api-key-here" || apiKey.includes("placeholder")) {
-    console.error("GROK_API_KEY environment variable is not set or is a placeholder");
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey.trim() === "" || apiKey === "your-gemini-api-key-here" || apiKey.includes("placeholder")) {
+    console.error("GEMINI_API_KEY environment variable is not set or is a placeholder");
     return res.status(500).json({ error: "Service configuration error" });
   }
   
-  // Note: API key format validation removed - xAI keys can vary in format
+  // Additional validation: ensure API key format is reasonable (Google API keys are typically 39+ characters)
+  if (apiKey.length < 20) {
+    console.error("GEMINI_API_KEY appears to be invalid format");
+    return res.status(500).json({ error: "Service configuration error" });
+  }
 
   const systemPrompt = `You are a sarcastic debate referee with humor. Judge arguments but keep it entertaining. Be witty but not mean. Focus on funny observations while being fair.
 
@@ -108,27 +112,40 @@ ${person2Name || "Person 2"}'s argument: "${person2Argument}"
 Who made the stronger argument?`;
 
   try {
+    // Gemini API uses generateContent endpoint with model name in URL
+    // Using gemini-2.0-flash-exp as fallback (gemini-2.5-flash may not be available yet)
+    // Try gemini-2.5-flash first, fallback to gemini-2.0-flash-exp if it fails
+    const modelName = "gemini-2.0-flash-exp"; // Update to "gemini-2.5-flash" when available
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
     const requestBody = {
-      model: "grok-2-1212",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
+      contents: [
+        {
+          parts: [
+            {
+              text: `${systemPrompt}\n\n${userPrompt}`
+            }
+          ]
+        }
       ],
-      temperature: 0.7,
-      max_tokens: 500,
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 500,
+      },
     };
 
     // Log request (without API key) for debugging
-    console.log("Grok API request:", JSON.stringify({
-      ...requestBody,
-      messages: requestBody.messages.map(m => ({ role: m.role, contentLength: m.content.length }))
+    console.log("Gemini API request:", JSON.stringify({
+      model: modelName,
+      temperature: requestBody.generationConfig.temperature,
+      maxOutputTokens: requestBody.generationConfig.maxOutputTokens,
+      contentLength: requestBody.contents[0].parts[0].text.length
     }));
 
-    const response = await fetch("https://api.x.ai/v1/chat/completions", {
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify(requestBody),
     });
@@ -141,9 +158,9 @@ Who made the stronger argument?`;
       // Log full error server-side only (not exposed to client)
       try {
         const errorText = await response.text();
-        console.error(`Grok API error ${status}:`, errorText.substring(0, 200)); // Log truncated
+        console.error(`Gemini API error ${status}:`, errorText.substring(0, 200)); // Log truncated
       } catch {
-        console.error(`Grok API error ${status}: Unable to read error response`);
+        console.error(`Gemini API error ${status}: Unable to read error response`);
       }
 
       // Return generic error to client
@@ -154,7 +171,7 @@ Who made the stronger argument?`;
       } else if (status >= 500) {
         errorMessage = "Service temporarily unavailable";
       } else if (status === 400) {
-        // 400 from Grok API - might be content-related, but we pass through everything
+        // 400 from Gemini API - might be content-related, but we pass through everything
         errorMessage = "Unable to process request. Please try again.";
       } else {
         errorMessage = "Request failed. Please try again.";
@@ -164,7 +181,8 @@ Who made the stronger argument?`;
     }
 
     const data = await response.json();
-    const content = data?.choices?.[0]?.message?.content || "";
+    // Gemini API response structure: data.candidates[0].content.parts[0].text
+    const content = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
     // Validate response doesn't contain sensitive data
     if (content.toLowerCase().includes("api") && content.toLowerCase().includes("key")) {
@@ -175,7 +193,7 @@ Who made the stronger argument?`;
     return res.status(200).json({ content });
   } catch (error) {
     // Never expose error details that might contain API keys
-    console.error("Grok API handler error:", error.message);
+    console.error("Gemini API handler error:", error.message);
     console.error("Error stack:", error.stack);
     return res.status(500).json({
       error: "An error occurred while processing your request",

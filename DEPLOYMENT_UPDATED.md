@@ -12,13 +12,14 @@ pnpm install
 Go to **Vercel Dashboard** → **Settings** → **Environment Variables** and add:
 
 ```
-GROK_API_KEY=xai-your-actual-api-key-here
+GEMINI_API_KEY=your-actual-gemini-api-key-here
 CLAUDE_API_KEY=sk-ant-your-actual-api-key-here
 ```
 
 **⚠️ CRITICAL:** 
-- Never use placeholder values like "your-grok-api-key-here"
-- API keys must start with proper prefixes (`xai-` for Grok, `sk-ant-` for Claude)
+- Never use placeholder values like "your-gemini-api-key-here"
+- Gemini API keys are typically 39+ characters (no specific prefix required)
+- Claude API keys must start with `sk-ant-`
 - Keys are validated server-side to prevent deployment with invalid keys
 
 ### 3. Deploy to Vercel
@@ -35,7 +36,7 @@ git push origin main
 
 ### ✅ API Key Validation
 - Server-side validation checks for placeholder values
-- Format validation (Grok: `xai-*`, Claude: `sk-ant-*`)
+- Format validation (Gemini: 20+ chars, Claude: `sk-ant-*`)
 - Prevents deployment with invalid/missing keys
 
 ### ✅ Input Sanitization
@@ -117,9 +118,8 @@ pnpm install
 ```
 debate-mate.v2/
 ├── api/
-│   └── analyze/
-│       ├── grok.js          # Grok API handler (Petty Mode)
-│       └── claude.js        # Claude API handler (Productive Mode)
+│   ├── gemini.js            # Gemini API handler (Petty Mode)
+│   └── claude.js            # Claude API handler (Productive Mode)
 ├── client/
 │   └── src/
 │       ├── components/
@@ -141,7 +141,7 @@ debate-mate.v2/
 - Security headers (X-Frame-Options, X-Content-Type-Options, etc.)
 - CORS configuration for API endpoints
 
-### API Handlers (grok.js, claude.js)
+### API Handlers (gemini.js, claude.js)
 - Enhanced API key validation
 - Placeholder detection
 - Format validation
@@ -167,7 +167,7 @@ Before deploying:
 ### "Service configuration error"
 - Check API keys are set in Vercel environment variables
 - Verify keys are not placeholders
-- Ensure keys have correct format (Grok: `xai-*`, Claude: `sk-ant-*`)
+- Ensure keys have correct format (Gemini: 20+ chars, Claude: `sk-ant-*`)
 
 ### Social/Export bars not showing
 - Verify `result` state is set after analysis
@@ -200,7 +200,7 @@ Before deploying:
 
 2. **Set environment variables in Vercel:**
    - Go to project settings
-   - Add `GROK_API_KEY` and `CLAUDE_API_KEY`
+   - Add `GEMINI_API_KEY` and `CLAUDE_API_KEY`
    - Ensure values are real API keys (not placeholders)
 
 3. **Deploy:**
