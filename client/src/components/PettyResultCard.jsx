@@ -93,35 +93,37 @@ export default function PettyResultCard({ result, person1Name, person2Name, mode
 
   return (
     <div className="mt-6 space-y-4">
-      {/* Card for display and download */}
+      {/* Card for display and download - 9:16 aspect ratio for TikTok */}
       <div
         ref={cardRef}
-        className={`relative rounded-3xl bg-gradient-to-br ${content.color} p-8 shadow-2xl`}
-        style={{ minHeight: "500px" }}
+        className={`relative rounded-3xl bg-gradient-to-br ${content.color} p-8 shadow-2xl mx-auto`}
+        style={{ 
+          width: "100%",
+          maxWidth: "405px", // 9:16 ratio: 405px width = 720px height
+          aspectRatio: "9 / 16",
+          minHeight: "720px"
+        }}
       >
         {/* Top Section - Winner and Score */}
         <div className="text-center mb-6">
           <p className="text-orange-100 text-sm uppercase tracking-widest font-bold mb-2">
             Winner
           </p>
-          <h1 className="text-6xl md:text-7xl font-black text-white mb-6 drop-shadow-lg">
+          <h1 className="text-5xl md:text-6xl font-black text-white mb-6 drop-shadow-lg">
             {winner}
           </h1>
           
-          {/* Power Gap Display */}
+          {/* Aura vs Cringe Display */}
           <div className="mb-4">
-            <p className="text-orange-200 text-xs uppercase tracking-widest font-semibold mb-3">
-              Power Gap
-            </p>
             <div className="flex items-center justify-center gap-4 mb-4">
-              {/* Winner's Score */}
+              {/* Winner's AURA */}
               <div className={`text-center ${mode === "petty" ? "animate-pulse" : ""}`}>
                 <p className="text-orange-100 text-xs uppercase tracking-wide font-semibold mb-1">
-                  {content.title1}
+                  AURA
                 </p>
                 <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-6 py-4">
                   <span className="text-5xl md:text-6xl font-black text-white">
-                    {mode === "petty" ? aura : alignment}
+                    +{mode === "petty" ? aura : alignment}
                   </span>
                 </div>
               </div>
@@ -133,14 +135,19 @@ export default function PettyResultCard({ result, person1Name, person2Name, mode
                 </span>
               </div>
               
-              {/* Loser's Score */}
+              {/* Loser's CRINGE RATING */}
               <div className={`text-center ${mode === "petty" ? "animate-bounce" : ""}`}>
                 <p className="text-orange-100 text-xs uppercase tracking-wide font-semibold mb-1">
-                  {content.title2}
+                  CRINGE RATING
                 </p>
                 <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-3">
                   <span className="text-xl md:text-2xl font-black text-white/80">
-                    {mode === "petty" ? cringe : friction}
+                    {(() => {
+                      const loserScore = mode === "petty" ? cringe : friction;
+                      const total = (mode === "petty" ? aura : alignment) + loserScore;
+                      const percentage = total > 0 ? Math.round((loserScore / total) * 100) : 0;
+                      return `${percentage}%`;
+                    })()}
                   </span>
                 </div>
               </div>
@@ -173,25 +180,25 @@ export default function PettyResultCard({ result, person1Name, person2Name, mode
           </div>
         </div>
 
-        {/* Middle Section - Fatal Flaw Badge */}
+        {/* Middle Section - SKILL ISSUE Badge */}
         <div className="flex justify-center mb-6">
-          <div className="bg-orange-500 rounded-full px-8 py-4 shadow-2xl transform hover:scale-105 transition-transform animate-pulse">
-            <p className="text-white font-black text-2xl md:text-3xl uppercase tracking-wider">
-              ⚠️ {content.flawLabel}: {fallacy}
+          <div className="bg-orange-500 rounded-full px-6 py-3 shadow-2xl transform hover:scale-105 transition-transform animate-pulse">
+            <p className="text-white font-black text-xl md:text-2xl uppercase tracking-wider">
+              ⚠️ SKILL ISSUE: {fallacy}
             </p>
           </div>
         </div>
 
         {/* Bottom Section - Savage Roast */}
-        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 mb-6">
-          <p className="text-white text-lg md:text-xl italic leading-relaxed text-center font-medium">
+        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 mb-4">
+          <p className="text-white text-base md:text-lg italic leading-relaxed text-center font-medium">
             "{roast}"
           </p>
         </div>
 
         {/* Footer - Branding */}
         <div className="flex items-center justify-between pt-4 border-t border-white/20">
-          <p className="text-orange-100 text-sm font-semibold">
+          <p className="text-orange-100 text-xs font-semibold">
             DebateMate.ai
           </p>
           <button
@@ -213,7 +220,7 @@ export default function PettyResultCard({ result, person1Name, person2Name, mode
                 alert("Link copied to clipboard!");
               }
             }}
-            className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-xs font-bold rounded-full transition-all backdrop-blur-sm"
+            className="px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-bold rounded-full transition-all backdrop-blur-sm"
           >
             {content.shareText}
           </button>

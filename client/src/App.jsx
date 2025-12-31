@@ -1,13 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { analyzeDebate } from "./lib/aiService";
 import {
-  getDebateHistory,
-  getScoreboard,
   parseAIResponse,
   saveDebateResult,
   saveToHistory,
-  getUnifiedHistory,
-  getMostFoughtTopic,
 } from "./lib/debateUtils";
 import { sanitizeInput, validateInputLength, checkRateLimit } from "./lib/security";
 import SocialShareBar from "./components/SocialShareBar";
@@ -24,15 +20,10 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
-  const [history, setHistory] = useState(() => getDebateHistory());
-  const [scoreboard, setScoreboard] = useState(() => getScoreboard());
-  const [historyExpanded, setHistoryExpanded] = useState(false);
   const [isChallengeMode, setIsChallengeMode] = useState(false);
+  const [gauntletSent, setGauntletSent] = useState(false);
 
   useEffect(() => {
-    setHistory(getDebateHistory());
-    setScoreboard(getScoreboard());
-    
     // Check for challenge link data
     const urlParams = new URLSearchParams(window.location.search);
     const dataParam = urlParams.get('data');
@@ -44,17 +35,19 @@ function App() {
           setName1(decoded.p1Name);
           setText1(decoded.p1Arg);
           setIsChallengeMode(true);
+          return; // Don't auto-fill if in challenge mode
         }
       } catch (err) {
         console.error("Failed to parse challenge data:", err);
       }
     }
+    
+    // Social auto-fill from referrer (only if not in challenge mode)
+    const userParam = urlParams.get('user');
+    if (userParam) {
+      setName1(userParam);
+    }
   }, []);
-
-  const unifiedHistory = useMemo(() => getUnifiedHistory(), [history, result]);
-  const historyCount = unifiedHistory.length;
-  const showPaywall = historyCount >= 10;
-  const mostFoughtTopic = useMemo(() => getMostFoughtTopic(), [historyCount]);
 
   const modeLabel = mode === "petty" ? "Petty" : "Productive";
   const accent =
@@ -64,17 +57,13 @@ function App() {
 
   const MAX_LENGTH = 500;
   
+  // Only allow analyze if both perspectives are filled
   const disableAnalyze =
     loading ||
     !text1.trim() ||
     !text2.trim() ||
     text1.length > MAX_LENGTH ||
     text2.length > MAX_LENGTH;
-
-  const historyPreview = useMemo(() => {
-    const unified = getUnifiedHistory();
-    return unified.slice(0, 5);
-  }, [unifiedHistory]);
 
   const handleAnalyze = async () => {
     if (disableAnalyze) return;
@@ -187,9 +176,6 @@ function App() {
       saveToHistory(mode, inputText, resultText);
       
       setResult(resultEntry);
-      // Refresh both history formats
-      setHistory(getDebateHistory());
-      setScoreboard(getScoreboard());
     } catch (err) {
       setError(
         err?.message ||
@@ -207,11 +193,12 @@ function App() {
     setText2("");
     setResult(null);
     setIsChallengeMode(false);
+    setGauntletSent(false);
   };
 
-  const handleCreateLink = async () => {
+  const handleSendGauntlet = async () => {
     if (!name1 || !text1.trim()) {
-      setError("Please fill in Name 1 and Perspective 1 to create a challenge link.");
+      setError("Please fill in Name and Perspective to send the gauntlet.");
       return;
     }
     
@@ -224,385 +211,191 @@ function App() {
       const link = `${window.location.origin}${window.location.pathname}?data=${payload}`;
       
       await navigator.clipboard.writeText(link);
-      alert("Challenge link copied to clipboard! Share it with your opponent.");
+      setGauntletSent(true);
+      setError(""); // Clear any previous errors
     } catch (err) {
       console.error("Failed to create link:", err);
       setError("Failed to create challenge link. Please try again.");
     }
   };
 
-  const handleKeyDown = (e) => {
-    // Enter without Shift triggers analyze
-    if (e.key === "Enter" && !e.shiftKey && !disableAnalyze) {
-      e.preventDefault();
-      handleAnalyze();
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-800 text-white flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-5xl space-y-4">
-        <div className="bg-white/5 border border-white/10 rounded-2xl shadow-2xl p-6 md:p-8 backdrop-blur">
-          <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-            <div className="space-y-1">
-              <p className="text-xs uppercase tracking-[0.25em] text-white/60">
-                Debate Mate
-              </p>
-              <h1 className="text-3xl md:text-4xl font-semibold">
-                Settle arguments in seconds.
-              </h1>
-              <p className="text-white/70 text-sm">
-                Drop two perspectives, pick the vibe, get an instant ruling.
-              </p>
-            </div>
-            <button
-              onClick={() =>
-                setMode((prev) => (prev === "petty" ? "productive" : "petty"))
-              }
-              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r ${accent} shadow-lg transition`}
-            >
-              <span className="h-2 w-2 rounded-full bg-white" />
-              {modeLabel} Mode
-            </button>
-          </header>
+      <div className="w-full max-w-2xl space-y-6">
+        {/* Header */}
+        <div className="text-center">
+          <h1 className="text-4xl md:text-5xl font-bold mb-2">DebateMate</h1>
+          <button
+            onClick={() =>
+              setMode((prev) => (prev === "petty" ? "productive" : "petty"))
+            }
+            className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r ${accent} shadow-lg transition`}
+          >
+            <span className="h-2 w-2 rounded-full bg-white" />
+            {modeLabel} Mode
+          </button>
+        </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
+        {/* Challenge Mode: Show P1 Card */}
+        {isChallengeMode && (
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <p className="text-xs uppercase tracking-wide text-white/60 mb-2">Challenge Received</p>
+            <div className="space-y-2">
+              <p className="font-semibold text-white">{name1}</p>
+              <p className="text-white/80 text-sm">{text1}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Gauntlet Sent Success State */}
+        {gauntletSent && !isChallengeMode && (
+          <div className="bg-green-500/20 border border-green-500/40 rounded-xl p-4 text-center">
+            <p className="text-green-300 font-semibold mb-1">Gauntlet Sent!</p>
+            <p className="text-green-200 text-sm">Share the link to get a rebuttal</p>
+          </div>
+        )}
+
+        {/* Input Fields */}
+        <div className="bg-white/5 border border-white/10 rounded-2xl shadow-2xl p-6 md:p-8 backdrop-blur space-y-4">
+          {!isChallengeMode && (
+            <>
+              <div className="space-y-2">
                 <label className="text-xs uppercase tracking-wide text-white/60">
-                  Name 1
+                  Name
                 </label>
-                {!isChallengeMode && (
-                  <button
-                    onClick={handleCreateLink}
-                    className="text-xs px-3 py-1 bg-white/10 hover:bg-white/20 rounded-lg transition text-white/80"
-                  >
-                    Create Link
-                  </button>
-                )}
-              </div>
-              <input
-                value={name1}
-                onChange={(e) => {
-                  if (!isChallengeMode) {
+                <input
+                  value={name1}
+                  onChange={(e) => {
                     const sanitized = sanitizeInput(e.target.value);
                     setName1(sanitized.slice(0, 50));
-                  }
-                }}
-                onKeyDown={handleKeyDown}
-                placeholder="Person 1 (optional)"
-                maxLength={50}
-                disabled={isChallengeMode}
-                className={`w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 ${
-                  isChallengeMode ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-              />
-              <label className="text-xs uppercase tracking-wide text-white/60">
-                Perspective 1 {text1.length > MAX_LENGTH && (
-                  <span className="text-red-400">({text1.length}/{MAX_LENGTH})</span>
-                )}
-              </label>
-              <textarea
-                value={text1}
-                onChange={(e) => {
-                  if (!isChallengeMode) {
+                  }}
+                  placeholder="Your name (optional)"
+                  maxLength={50}
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs uppercase tracking-wide text-white/60">
+                  Perspective {text1.length > MAX_LENGTH && (
+                    <span className="text-red-400">({text1.length}/{MAX_LENGTH})</span>
+                  )}
+                </label>
+                <textarea
+                  value={text1}
+                  onChange={(e) => {
                     const sanitized = validateInputLength(e.target.value, MAX_LENGTH);
                     setText1(sanitized);
-                  }
-                }}
-                onKeyDown={handleKeyDown}
-                placeholder="Their argument..."
-                rows={6}
-                maxLength={MAX_LENGTH}
-                disabled={isChallengeMode}
-                className={`w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 ${
-                  isChallengeMode ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-              />
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-xs uppercase tracking-wide text-white/60">
-                Name 2
-              </label>
-              <input
-                value={name2}
-                onChange={(e) => {
-                  const sanitized = sanitizeInput(e.target.value);
-                  setName2(sanitized.slice(0, 50)); // Limit name length
-                }}
-                onKeyDown={handleKeyDown}
-                placeholder="Person 2 (optional)"
-                maxLength={50}
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
-              />
-              <label className="text-xs uppercase tracking-wide text-white/60">
-                Perspective 2 {text2.length > MAX_LENGTH && (
-                  <span className="text-red-400">({text2.length}/{MAX_LENGTH})</span>
-                )}
-              </label>
-              <textarea
-                value={text2}
-                onChange={(e) => {
-                  const sanitized = validateInputLength(e.target.value, MAX_LENGTH);
-                  setText2(sanitized);
-                }}
-                onKeyDown={handleKeyDown}
-                placeholder="Their argument..."
-                rows={6}
-                maxLength={MAX_LENGTH}
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-3 mt-4">
-            <button
-              onClick={handleAnalyze}
-              disabled={disableAnalyze}
-              className={`flex-1 rounded-xl px-4 py-3 text-white font-semibold shadow-lg transition bg-gradient-to-r ${accent} ${
-                disableAnalyze ? "opacity-50 cursor-not-allowed" : "hover:scale-[1.01]"
-              }`}
-            >
-              {loading ? "Analyzing..." : "Analyze debate"}
-            </button>
-            <button
-              onClick={handleReset}
-              className="rounded-xl px-4 py-3 border border-white/15 text-white/80 font-semibold hover:bg-white/5 transition"
-            >
-              Reset
-            </button>
-          </div>
-
-          {error && (
-            <div className="mt-4 rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-              {error}
-            </div>
-          )}
-
-          {result && mode === "petty" && (
-            <PettyResultCard
-              result={{
-                winner: result.winner,
-                score: result.score || `${result.winnerScore}-${result.loserScore}`,
-                fallacy: result.fatalFlaw || result.fallacy,
-                roast: result.roast || result.analysis,
-                aura: result.aura,
-                cringe: result.cringe,
-                skill_issue: result.skill_issue,
-                rawResponse: result.rawResponse
-              }}
-              person1Name={result.person1Name}
-              person2Name={result.person2Name}
-              mode={mode}
-            />
-          )}
-          
-          {result && mode === "productive" && (
-            <PettyResultCard
-              result={{
-                alignment: result.alignment,
-                friction: result.friction,
-                comm_block: result.comm_block,
-                insight: result.insight,
-                rawResponse: result.rawResponse
-              }}
-              person1Name={result.person1Name}
-              person2Name={result.person2Name}
-              mode={mode}
-            />
-          )}
-
-          {result && (
-            <>
-              {mode === "petty" && <SocialShareBar result={result} mode={mode} />}
-              {mode === "productive" && <ExportBar result={result} mode={mode} />}
+                  }}
+                  placeholder="Your argument..."
+                  rows={4}
+                  maxLength={MAX_LENGTH}
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 resize-none"
+                />
+              </div>
             </>
           )}
 
-          <section className={`mt-6 grid gap-4 ${mode === "petty" ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
-            <div className="rounded-xl border border-white/10 bg-white/5 p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold">Recent history</h3>
-                {historyCount > 5 && (
-                  <button
-                    onClick={() => setHistoryExpanded(!historyExpanded)}
-                    className="text-xs text-white/60 hover:text-white/80 transition"
-                  >
-                    {historyExpanded ? "Collapse" : `View ${historyCount} squabbles`}
-                  </button>
-                )}
+          {isChallengeMode && (
+            <>
+              <div className="space-y-2">
+                <label className="text-xs uppercase tracking-wide text-white/60">
+                  Your Name
+                </label>
+                <input
+                  value={name2}
+                  onChange={(e) => {
+                    const sanitized = sanitizeInput(e.target.value);
+                    setName2(sanitized.slice(0, 50));
+                  }}
+                  placeholder="Your name (optional)"
+                  maxLength={50}
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
+                />
               </div>
-              
-              {showPaywall && !historyExpanded && (
-                <div className="mb-3 rounded-lg border border-orange-500/30 bg-gradient-to-r from-orange-500/10 to-pink-500/10 p-3">
-                  <p className="text-sm font-semibold text-white mb-1">
-                    Unlock insights + unlimited - $19/mo
-                  </p>
-                  {mostFoughtTopic && (
-                    <p className="text-xs text-white/70">
-                      Your most fought topic: <span className="font-semibold">{mostFoughtTopic}</span>
-                    </p>
+              <div className="space-y-2">
+                <label className="text-xs uppercase tracking-wide text-white/60">
+                  Your Rebuttal {text2.length > MAX_LENGTH && (
+                    <span className="text-red-400">({text2.length}/{MAX_LENGTH})</span>
                   )}
-                </div>
-              )}
-              
-              {historyPreview.length === 0 ? (
-                <p className="text-sm text-white/60">No debates yet.</p>
-              ) : (
-                <>
-                  <ul className="space-y-2 text-sm text-white/80">
-                    {historyPreview.map((item) => {
-                      const isSquabble = item.type === 'squabble' || item.mode === 'petty';
-                      const isProductive = item.type === 'productive' || item.mode === 'productive';
-                      
-                      // Parse score from various formats
-                      let score = item.score;
-                      if (!score && isProductive) {
-                        if (item.winnerScore) {
-                          score = `${item.winnerScore}/10`;
-                        } else if (item.result) {
-                          const scoreMatch = item.result.match(/(\d+)\s*\/\s*10/i);
-                          if (scoreMatch) {
-                            score = `${scoreMatch[1]}/10`;
-                          }
-                        }
-                      }
-                      
-                      // Get display text
-                      const displayText = item.result || item.analysis || item.input || 'No details';
-                      const displayDate = item.date || (item.timestamp ? new Date(item.timestamp).toLocaleString() : null);
-                      
-                      return (
-                        <li
-                          key={item.id || item.timestamp}
-                          className="rounded-lg border border-white/10 px-3 py-2"
-                        >
-                          <div className="flex items-center justify-between gap-2 mb-1">
-                            <div className="flex items-center gap-2">
-                              {isSquabble && <span className="text-xs">🥊</span>}
-                              {isProductive && <span className="text-xs">💔</span>}
-                              <span className="font-semibold text-xs">
-                                {isSquabble ? "Petty" : "Productive"}
-                              </span>
-                            </div>
-                            {score && (
-                              <span className="text-xs text-white/70 font-semibold">
-                                {score}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-white/70 text-sm overflow-hidden text-ellipsis line-clamp-2">
-                            {displayText}
-                          </p>
-                          {displayDate && (
-                            <p className="text-xs text-white/50 mt-1">{displayDate}</p>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  
-                  {historyExpanded && historyCount > 5 && (
-                    <ul className="space-y-2 text-sm text-white/80 mt-3">
-                      {unifiedHistory.slice(5).map((item) => {
-                        const isSquabble = item.type === 'squabble' || item.mode === 'petty';
-                        const isProductive = item.type === 'productive' || item.mode === 'productive';
-                        
-                        // Parse score from various formats
-                        let score = item.score;
-                        if (!score && isProductive) {
-                          if (item.winnerScore) {
-                            score = `${item.winnerScore}/10`;
-                          } else if (item.result) {
-                            const scoreMatch = item.result.match(/(\d+)\s*\/\s*10/i);
-                            if (scoreMatch) {
-                              score = `${scoreMatch[1]}/10`;
-                            }
-                          }
-                        }
-                        
-                        // Get display text
-                        const displayText = item.result || item.analysis || item.input || 'No details';
-                        const displayDate = item.date || (item.timestamp ? new Date(item.timestamp).toLocaleString() : null);
-                        
-                        return (
-                          <li
-                            key={item.id || item.timestamp}
-                            className="rounded-lg border border-white/10 px-3 py-2"
-                          >
-                            <div className="flex items-center justify-between gap-2 mb-1">
-                              <div className="flex items-center gap-2">
-                                {isSquabble && <span className="text-xs">🥊</span>}
-                                {isProductive && <span className="text-xs">💔</span>}
-                                <span className="font-semibold text-xs">
-                                  {isSquabble ? "Petty" : "Productive"}
-                                </span>
-                              </div>
-                              {score && (
-                                <span className="text-xs text-white/70 font-semibold">
-                                  {score}
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-white/70 text-sm overflow-hidden text-ellipsis line-clamp-2">
-                              {displayText}
-                            </p>
-                            {displayDate && (
-                              <p className="text-xs text-white/50 mt-1">{displayDate}</p>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                  
-                  {showPaywall && historyExpanded && (
-                    <div className="mt-3 rounded-lg border border-orange-500/30 bg-gradient-to-r from-orange-500/10 to-pink-500/10 p-3">
-                      <p className="text-sm font-semibold text-white mb-1">
-                        Unlock insights + unlimited - $19/mo
-                      </p>
-                      {mostFoughtTopic && (
-                        <p className="text-xs text-white/70">
-                          Your most fought topic: <span className="font-semibold">{mostFoughtTopic}</span>
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+                </label>
+                <textarea
+                  value={text2}
+                  onChange={(e) => {
+                    const sanitized = validateInputLength(e.target.value, MAX_LENGTH);
+                    setText2(sanitized);
+                  }}
+                  placeholder="Your rebuttal..."
+                  rows={4}
+                  maxLength={MAX_LENGTH}
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 resize-none"
+                />
+              </div>
+            </>
+          )}
 
-            {mode === "petty" && (
-              <div className="rounded-xl border border-white/10 bg-white/5 p-4 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold">Scoreboard</h3>
-                  <span className="text-xs text-white/60">Wins / Losses</span>
-                </div>
-                {Object.keys(scoreboard).length === 0 ? (
-                  <p className="text-sm text-white/60">No stats yet.</p>
-                ) : (
-                  <ul className="space-y-2 text-sm text-white/80">
-                    {Object.entries(scoreboard).map(([name, stats]) => (
-                      <li
-                        key={name}
-                        className="flex items-center justify-between rounded-lg border border-white/10 px-3 py-2"
-                      >
-                        <span className="font-semibold">{name}</span>
-                        <span className="text-xs text-white/70">
-                          {stats.wins}W / {stats.losses}L
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
-          </section>
+          {/* Primary Action Button */}
+          <button
+            onClick={isChallengeMode ? handleAnalyze : handleSendGauntlet}
+            disabled={isChallengeMode ? disableAnalyze : (!name1 || !text1.trim() || loading)}
+            className={`w-full rounded-xl px-6 py-4 font-bold text-white bg-gradient-to-r ${accent} shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-xl text-lg`}
+          >
+            {loading 
+              ? "Analyzing..." 
+              : isChallengeMode 
+                ? "Rebut & Score Aura" 
+                : "Send the Gauntlet"
+            }
+          </button>
         </div>
-        <p className="text-center text-xs text-white/60">
-          For entertainment and self-improvement only.
-        </p>
+
+        {/* Error Message */}
+        {error && (
+          <div className="rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+            {error}
+          </div>
+        )}
+
+        {/* Results */}
+        {result && mode === "petty" && (
+          <PettyResultCard
+            result={{
+              winner: result.winner,
+              score: result.score || `${result.winnerScore}-${result.loserScore}`,
+              fallacy: result.fatalFlaw || result.fallacy,
+              roast: result.roast || result.analysis,
+              aura: result.aura,
+              cringe: result.cringe,
+              skill_issue: result.skill_issue,
+              rawResponse: result.rawResponse
+            }}
+            person1Name={result.person1Name}
+            person2Name={result.person2Name}
+            mode={mode}
+          />
+        )}
+        
+        {result && mode === "productive" && (
+          <PettyResultCard
+            result={{
+              alignment: result.alignment,
+              friction: result.friction,
+              comm_block: result.comm_block,
+              insight: result.insight,
+              rawResponse: result.rawResponse
+            }}
+            person1Name={result.person1Name}
+            person2Name={result.person2Name}
+            mode={mode}
+          />
+        )}
+
+        {result && (
+          <>
+            {mode === "petty" && <SocialShareBar result={result} mode={mode} />}
+            {mode === "productive" && <ExportBar result={result} mode={mode} />}
+          </>
+        )}
       </div>
     </div>
   );
