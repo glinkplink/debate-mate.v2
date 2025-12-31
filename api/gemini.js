@@ -152,6 +152,7 @@ Who made the stronger argument?`;
 
     // Log request (without API key) for debugging
     console.log("Gemini API request:", JSON.stringify({
+      url: apiUrl.replace(apiKey, "[REDACTED]"),
       model: modelName,
       temperature: requestBody.generationConfig.temperature,
       maxOutputTokens: requestBody.generationConfig.maxOutputTokens,
@@ -170,25 +171,49 @@ Who made the stronger argument?`;
       // Never expose API keys or sensitive details in error messages
       const status = response.status;
       let errorMessage = "Failed to analyze debate";
+      let errorDetails = null;
       
       // Log full error server-side only (not exposed to client)
       try {
         const errorText = await response.text();
-        console.error(`Gemini API error ${status}:`, errorText.substring(0, 200)); // Log truncated
-      } catch {
-        console.error(`Gemini API error ${status}: Unable to read error response`);
+        console.error(`Gemini API error ${status}:`, errorText);
+        
+        // Try to parse error JSON
+        try {
+          errorDetails = JSON.parse(errorText);
+          console.error("Error details:", JSON.stringify(errorDetails, null, 2));
+        } catch {
+          // Not JSON, use text
+          errorDetails = { message: errorText.substring(0, 500) };
+        }
+      } catch (e) {
+        console.error(`Gemini API error ${status}: Unable to read error response`, e);
       }
 
-      // Return generic error to client
+      // Return more specific error messages based on actual API response
       if (status === 401 || status === 403) {
-        errorMessage = "Authentication failed";
+        errorMessage = "Authentication failed. Please check API key.";
+      } else if (status === 404) {
+        errorMessage = "Model not found. Please check model name.";
       } else if (status === 429) {
         errorMessage = "Rate limit exceeded. Please try again later.";
       } else if (status >= 500) {
         errorMessage = "Service temporarily unavailable";
       } else if (status === 400) {
-        // 400 from Gemini API - might be content-related, but we pass through everything
-        errorMessage = "Unable to process request. Please try again.";
+        // 400 from Gemini API - check for specific error messages
+        if (errorDetails?.error?.message) {
+          const apiMessage = errorDetails.error.message;
+          if (apiMessage.includes("model") || apiMessage.includes("not found")) {
+            errorMessage = "Model not available. Please check model name.";
+          } else if (apiMessage.includes("invalid") || apiMessage.includes("format")) {
+            errorMessage = "Invalid request format.";
+          } else {
+            errorMessage = "Unable to process request. Please try again.";
+          }
+          console.error("Gemini 400 error details:", apiMessage);
+        } else {
+          errorMessage = "Unable to process request. Please try again.";
+        }
       } else {
         errorMessage = "Request failed. Please try again.";
       }
