@@ -167,8 +167,19 @@ Analyze this debate and output ONLY valid JSON.`;
       return res.status(200).json({ content });
     }
 
-    // Validate JSON structure
-    if (!jsonResponse.winner || !jsonResponse.score || !jsonResponse.fallacy || !jsonResponse.roast) {
+    // Validate JSON structure - check for new format (aura, cringe, skill_issue) or legacy format (score, fallacy)
+    const hasNewFormat = jsonResponse.winner && 
+                        jsonResponse.aura !== undefined && 
+                        jsonResponse.cringe !== undefined && 
+                        jsonResponse.skill_issue && 
+                        jsonResponse.roast;
+    
+    const hasLegacyFormat = jsonResponse.winner && 
+                           jsonResponse.score && 
+                           jsonResponse.fallacy && 
+                           jsonResponse.roast;
+    
+    if (!hasNewFormat && !hasLegacyFormat) {
       console.error("Invalid JSON structure:", jsonResponse);
       return res.status(200).json({ content }); // Fallback to raw content
     }

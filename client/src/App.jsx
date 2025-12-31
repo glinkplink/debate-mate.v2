@@ -179,11 +179,18 @@ function App() {
       saveToHistory(mode, inputText, resultText);
       
       setResult(resultEntry);
+      setError(""); // Clear any previous errors on success
     } catch (err) {
-      setError(
-        err?.message ||
-          "Something went wrong while analyzing. Please try again."
-      );
+      console.error("Analysis error:", err);
+      const errorMessage = err?.message || "Unable to process request. Please try again.";
+      setError(errorMessage);
+      
+      // If it's a network error, provide more helpful message
+      if (err.message?.includes("fetch") || err.message?.includes("network")) {
+        setError("Network error. Please check your connection and try again.");
+      } else if (err.message?.includes("status")) {
+        setError("Server error. Please try again in a moment.");
+      }
     } finally {
       setLoading(false);
     }
@@ -232,15 +239,17 @@ function App() {
         <div className="text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-2">DropTake</h1>
           <p className="text-white/70 text-sm mb-3">Settle the score. Collect the Aura.</p>
-          <button
-            onClick={() =>
-              setMode((prev) => (prev === "petty" ? "productive" : "petty"))
-            }
-            className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r ${accent} shadow-lg transition`}
-          >
-            <span className="h-2 w-2 rounded-full bg-white" />
-            {modeLabel} Mode
-          </button>
+          {!isChallengeMode && (
+            <button
+              onClick={() =>
+                setMode((prev) => (prev === "petty" ? "productive" : "petty"))
+              }
+              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r ${accent} shadow-lg transition`}
+            >
+              <span className="h-2 w-2 rounded-full bg-white" />
+              {modeLabel} Mode
+            </button>
+          )}
         </div>
 
         {/* Challenge Mode: Show P1 Card */}
