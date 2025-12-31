@@ -77,15 +77,15 @@ export default async function handler(req, res) {
   }
 
   // Check API key (never expose in errors)
-  const apiKey = process.env.CLAUDE_API_KEY;
+  const apiKey = process.env.VITE_CLAUDE_API_KEY;
   if (!apiKey || apiKey.trim() === "" || apiKey === "your-claude-api-key-here" || apiKey.includes("placeholder")) {
-    console.error("CLAUDE_API_KEY environment variable is not set or is a placeholder");
+    console.error("VITE_CLAUDE_API_KEY environment variable is not set or is a placeholder");
     return res.status(500).json({ error: "Service configuration error" });
   }
   
   // Additional validation: ensure API key format is reasonable (Anthropic keys typically start with sk-ant-)
   if (!apiKey.startsWith("sk-ant-") && apiKey.length < 20) {
-    console.error("CLAUDE_API_KEY appears to be invalid format");
+    console.error("VITE_CLAUDE_API_KEY appears to be invalid format");
     return res.status(500).json({ error: "Service configuration error" });
   }
 
@@ -103,7 +103,11 @@ ${person2Name || "Person 2"}'s argument: "${person2Argument}"
 Who made the stronger argument?`;
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    // Get base URL and model from environment variables, with defaults
+    const baseUrl = process.env.VITE_CLAUDE_BASE_URL || "https://api.anthropic.com/v1/messages";
+    const model = process.env.VITE_CLAUDE_MODEL || "claude-haiku-4-5-20251001";
+
+    const response = await fetch(baseUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -111,7 +115,7 @@ Who made the stronger argument?`;
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
+        model: model,
         max_tokens: 500,
         system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],

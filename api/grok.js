@@ -58,7 +58,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // Sanitize inputs - only remove HTML/XSS, preserve all text content
+  // Sanitize inputs - only remove HTML/XSS, preserve all other content
   let person1Name = body?.person1Name || "";
   let person1Argument = body?.person1Argument || "";
   let person2Name = body?.person2Name || "";
@@ -71,47 +71,22 @@ export default async function handler(req, res) {
   if (typeof person2Argument === "string") person2Argument = sanitizeString(person2Argument);
 
   // Validate inputs - only check for required fields and length, not content
-  // Allow any text content including single characters for testing
   const validationErrors = validateInputs(person1Name, person1Argument, person2Name, person2Argument);
   if (validationErrors.length > 0) {
-    console.log("Validation errors:", validationErrors);
     return res.status(400).json({ error: validationErrors.join("; ") });
   }
 
-  console.log("Processing request:", {
-    person1Name: person1Name.substring(0, 20),
-    person1Argument: person1Argument.substring(0, 20),
-    person2Name: person2Name.substring(0, 20),
-    person2Argument: person2Argument.substring(0, 20),
-  });
-
   // Check API key (never expose in errors)
-  const apiKey = process.env.GEMINI_API_KEY;
-  
-  // Debug logging (server-side only)
-  console.log("GEMINI_API_KEY check:", {
-    exists: !!apiKey,
-    length: apiKey ? apiKey.length : 0,
-    isPlaceholder: apiKey === "your-gemini-api-key-here" || (apiKey && apiKey.includes("placeholder")),
-    firstChars: apiKey ? apiKey.substring(0, 5) + "..." : "none"
-  });
-  
-  if (!apiKey || apiKey.trim() === "" || apiKey === "your-gemini-api-key-here" || apiKey.includes("placeholder")) {
-    console.error("GEMINI_API_KEY environment variable is not set or is a placeholder");
-    console.error("Available env vars:", Object.keys(process.env).filter(k => k.includes("GEMINI") || k.includes("API")));
-    return res.status(500).json({ 
-      error: "Service configuration error",
-      hint: "GEMINI_API_KEY environment variable is missing or invalid. Please set it in Vercel dashboard."
-    });
+  const apiKey = process.env.VITE_GROK_API_KEY;
+  if (!apiKey || apiKey.trim() === "" || apiKey === "your-grok-api-key-here" || apiKey.includes("placeholder")) {
+    console.error("VITE_GROK_API_KEY environment variable is not set or is a placeholder");
+    return res.status(500).json({ error: "Service configuration error" });
   }
   
-  // Additional validation: ensure API key format is reasonable (Google API keys are typically 39+ characters)
+  // Additional validation: ensure API key format is reasonable
   if (apiKey.length < 20) {
-    console.error("GEMINI_API_KEY appears to be invalid format (length:", apiKey.length, ")");
-    return res.status(500).json({ 
-      error: "Service configuration error",
-      hint: "GEMINI_API_KEY must be at least 20 characters long."
-    });
+    console.error("VITE_GROK_API_KEY appears to be invalid format (length:", apiKey.length, ")");
+    return res.status(500).json({ error: "Service configuration error" });
   }
 
   const systemPrompt = `You are a sarcastic debate referee with humor. Judge arguments but keep it entertaining. Be witty but not mean. Focus on funny observations while being fair.
@@ -128,92 +103,49 @@ ${person2Name || "Person 2"}'s argument: "${person2Argument}"
 Who made the stronger argument?`;
 
   try {
-    // Gemini API uses generateContent endpoint with model name in URL
-    // Base URL: https://generativelanguage.googleapis.com/v1beta/
-    // Model: gemini-2.0-flash
-    const modelName = "gemini-2.0-flash";
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+    // Get base URL and model from environment variables, with defaults
+    const baseUrl = process.env.VITE_GROK_BASE_URL || "https://api.x.ai/v1/chat/completions";
+    const model = process.env.VITE_GROK_MODEL || "grok-4-1-fast-non-reasoning";
 
-    const requestBody = {
-      contents: [
-        {
-          parts: [
-            {
-              text: `${systemPrompt}\n\n${userPrompt}`
-            }
-          ]
-        }
-      ],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 500,
-      },
-    };
-
-    // Log request (without API key) for debugging
-    console.log("Gemini API request:", JSON.stringify({
-      url: apiUrl.replace(apiKey, "[REDACTED]"),
-      model: modelName,
-      temperature: requestBody.generationConfig.temperature,
-      maxOutputTokens: requestBody.generationConfig.maxOutputTokens,
-      contentLength: requestBody.contents[0].parts[0].text.length
-    }));
-
-    const response = await fetch(apiUrl, {
+    const response = await fetch(baseUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        max_tokens: 500,
+        temperature: 0.7,
+      }),
     });
 
     if (!response.ok) {
       // Never expose API keys or sensitive details in error messages
       const status = response.status;
       let errorMessage = "Failed to analyze debate";
-      let errorDetails = null;
       
       // Log full error server-side only (not exposed to client)
       try {
         const errorText = await response.text();
-        console.error(`Gemini API error ${status}:`, errorText);
-        
-        // Try to parse error JSON
-        try {
-          errorDetails = JSON.parse(errorText);
-          console.error("Error details:", JSON.stringify(errorDetails, null, 2));
-        } catch {
-          // Not JSON, use text
-          errorDetails = { message: errorText.substring(0, 500) };
-        }
-      } catch (e) {
-        console.error(`Gemini API error ${status}: Unable to read error response`, e);
+        console.error(`Grok API error ${status}:`, errorText.substring(0, 200)); // Log truncated
+      } catch {
+        console.error(`Grok API error ${status}: Unable to read error response`);
       }
 
-      // Return more specific error messages based on actual API response
+      // Return generic error to client
       if (status === 401 || status === 403) {
-        errorMessage = "Authentication failed. Please check API key.";
-      } else if (status === 404) {
-        errorMessage = "Model not found. Please check model name.";
+        errorMessage = "Authentication failed";
       } else if (status === 429) {
         errorMessage = "Rate limit exceeded. Please try again later.";
       } else if (status >= 500) {
         errorMessage = "Service temporarily unavailable";
       } else if (status === 400) {
-        // 400 from Gemini API - check for specific error messages
-        if (errorDetails?.error?.message) {
-          const apiMessage = errorDetails.error.message;
-          if (apiMessage.includes("model") || apiMessage.includes("not found")) {
-            errorMessage = "Model not available. Please check model name.";
-          } else if (apiMessage.includes("invalid") || apiMessage.includes("format")) {
-            errorMessage = "Invalid request format.";
-          } else {
-            errorMessage = "Unable to process request. Please try again.";
-          }
-          console.error("Gemini 400 error details:", apiMessage);
-        } else {
-          errorMessage = "Unable to process request. Please try again.";
-        }
+        errorMessage = "Unable to process request. Please try again.";
       } else {
         errorMessage = "Request failed. Please try again.";
       }
@@ -222,8 +154,8 @@ Who made the stronger argument?`;
     }
 
     const data = await response.json();
-    // Gemini API response structure: data.candidates[0].content.parts[0].text
-    const content = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    // Grok API response structure: data.choices[0].message.content
+    const content = data?.choices?.[0]?.message?.content || "";
 
     // Validate response doesn't contain sensitive data
     if (content.toLowerCase().includes("api") && content.toLowerCase().includes("key")) {
@@ -234,8 +166,7 @@ Who made the stronger argument?`;
     return res.status(200).json({ content });
   } catch (error) {
     // Never expose error details that might contain API keys
-    console.error("Gemini API handler error:", error.message);
-    console.error("Error stack:", error.stack);
+    console.error("Grok API handler error:", error.message);
     return res.status(500).json({
       error: "An error occurred while processing your request",
     });
