@@ -9,11 +9,6 @@
       "destination": "/api/:path*"
     }
   ],
-  "functions": {
-    "api/*.js": {
-      "runtime": "nodejs@22.21.0"
-    }
-  },
   "headers": [
     {
       "source": "/(.*)",
