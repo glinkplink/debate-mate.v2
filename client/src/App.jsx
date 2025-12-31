@@ -14,7 +14,6 @@ import SocialShareBar from "./components/SocialShareBar";
 import ExportBar from "./components/ExportBar";
 import CommunicationHealthRadar from "./components/CommunicationHealthRadar";
 import PettyResultCard from "./components/PettyResultCard";
-import PettyResultCard from "./components/PettyResultCard";
 
 function App() {
   const [mode, setMode] = useState("petty");
