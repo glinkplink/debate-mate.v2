@@ -129,7 +129,9 @@ Who made the stronger argument?`;
 
   try {
     // Gemini API uses generateContent endpoint with model name in URL
-    const modelName = "gemini-1.5-flash-latest";
+    // Base URL: https://generativelanguage.googleapis.com/v1beta/
+    // Model: gemini-2.0-flash
+    const modelName = "gemini-2.0-flash";
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
     const requestBody = {
