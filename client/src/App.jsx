@@ -52,11 +52,14 @@ function App() {
     }
   }, []);
 
-  const modeLabel = mode === "petty" ? "Petty" : "Productive";
+  const modeLabel = mode === "petty" ? "AuraWars" : "Resolution";
+  const modeTagline = mode === "petty" 
+    ? "Drop takes, collect aura" 
+    : "Settle the Friction";
   const accent =
     mode === "petty"
-      ? "from-orange-500 to-pink-500"
-      : "from-indigo-500 to-sky-500";
+      ? "from-pink-500 to-orange-500"
+      : "from-teal-500 to-blue-500";
 
   const MAX_LENGTH = 500;
   
@@ -238,17 +241,25 @@ function App() {
         {/* Header */}
         <div className="text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-2">DropTake</h1>
-          <p className="text-white/70 text-sm mb-3">Settle the score. Collect the Aura.</p>
-          {!isChallengeMode && (
-            <button
-              onClick={() =>
-                setMode((prev) => (prev === "petty" ? "productive" : "petty"))
-              }
-              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r ${accent} shadow-lg transition`}
-            >
-              <span className="h-2 w-2 rounded-full bg-white" />
-              {modeLabel} Mode
-            </button>
+          {!isChallengeMode ? (
+            <>
+              <p className={`text-sm mb-3 font-semibold bg-gradient-to-r ${accent} bg-clip-text text-transparent`}>
+                {modeLabel}: {modeTagline}
+              </p>
+              <button
+                onClick={() =>
+                  setMode((prev) => (prev === "petty" ? "productive" : "petty"))
+                }
+                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r ${accent} shadow-lg transition`}
+              >
+                <span className="h-2 w-2 rounded-full bg-white" />
+                {modeLabel}
+              </button>
+            </>
+          ) : (
+            <p className={`text-sm mb-3 font-semibold bg-gradient-to-r ${accent} bg-clip-text text-transparent`}>
+              {modeLabel}: {modeTagline}
+            </p>
           )}
         </div>
 

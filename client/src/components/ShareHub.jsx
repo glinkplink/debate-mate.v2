@@ -1,21 +1,24 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import html2canvas from "html2canvas";
 import PerspectiveCard from "./PerspectiveCard";
 
 export default function ShareHub({ activeLink, name, argument, onClose }) {
   const perspectiveCardRef = useRef(null);
+  const [statusMessage, setStatusMessage] = useState("");
 
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(activeLink);
-      alert("Link copied to clipboard!");
+      setStatusMessage("Link copied to clipboard!");
+      setTimeout(() => setStatusMessage(""), 3000);
     } catch (err) {
       console.error("Failed to copy link:", err);
-      alert("Failed to copy link. Please try again.");
+      setStatusMessage("Failed to copy link. Please try again.");
+      setTimeout(() => setStatusMessage(""), 3000);
     }
   };
 
-  const handleIGStory = async () => {
+  const handleInstagram = async () => {
     try {
       // Copy link to clipboard
       await navigator.clipboard.writeText(activeLink);
@@ -35,28 +38,67 @@ export default function ShareHub({ activeLink, name, argument, onClose }) {
         link.click();
       }
       
-      alert("Link copied and card downloaded! Add to your IG Story.");
+      setStatusMessage("Image saved. Use Link Sticker in Stories.");
+      setTimeout(() => setStatusMessage(""), 5000);
     } catch (error) {
-      console.error("Failed to generate IG Story:", error);
-      alert("Failed to generate IG Story. Please try again.");
+      console.error("Failed to generate Instagram Story:", error);
+      setStatusMessage("Failed to generate image. Please try again.");
+      setTimeout(() => setStatusMessage(""), 3000);
     }
   };
 
-  const handleTikTokComment = async () => {
+  const handleSnapchat = async () => {
     try {
-      const text = `Challenge my take here: ${activeLink} #DropTake`;
-      await navigator.clipboard.writeText(text);
-      alert("TikTok comment copied to clipboard!");
-    } catch (err) {
-      console.error("Failed to copy TikTok comment:", err);
-      alert("Failed to copy. Please try again.");
+      // Copy link to clipboard
+      await navigator.clipboard.writeText(activeLink);
+      
+      // Download Perspective Card
+      if (perspectiveCardRef.current) {
+        const canvas = await html2canvas(perspectiveCardRef.current, {
+          backgroundColor: "#000000",
+          scale: 2,
+          useCORS: true,
+          logging: false,
+        });
+
+        const link = document.createElement("a");
+        link.download = `drop-take-${Date.now()}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      }
+      
+      setStatusMessage("Image saved. Use Link Sticker in Stories.");
+      setTimeout(() => setStatusMessage(""), 5000);
+    } catch (error) {
+      console.error("Failed to generate Snapchat Story:", error);
+      setStatusMessage("Failed to generate image. Please try again.");
+      setTimeout(() => setStatusMessage(""), 3000);
     }
   };
 
-  const handleXPost = () => {
-    const text = `Just dropped a take on DropTake. Who's brave enough to rebuttal? ${activeLink}`;
+  const handleTikTok = async () => {
+    try {
+      const text = `You disagree? Say it with your chest. ${activeLink} #AuraWars #DropTake`;
+      await navigator.clipboard.writeText(text);
+      
+      // Try to open TikTok (may not work on all browsers)
+      window.open("https://www.tiktok.com/upload", "_blank");
+      
+      setStatusMessage("Text copied! Paste in TikTok comments.");
+      setTimeout(() => setStatusMessage(""), 5000);
+    } catch (err) {
+      console.error("Failed to copy TikTok text:", err);
+      setStatusMessage("Failed to copy. Please try again.");
+      setTimeout(() => setStatusMessage(""), 3000);
+    }
+  };
+
+  const handleX = () => {
+    const text = `You disagree? Say it with your chest. ${activeLink} #AuraWars #DropTake`;
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
     window.open(url, "_blank", "width=550,height=420");
+    setStatusMessage("Opening X...");
+    setTimeout(() => setStatusMessage(""), 3000);
   };
 
   return (
@@ -78,37 +120,55 @@ export default function ShareHub({ activeLink, name, argument, onClose }) {
           <p className="text-white/70 text-sm">Spread the word and collect those rebuttals</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {statusMessage && (
+          <div className="mb-4 rounded-xl border border-green-500/40 bg-green-500/10 px-4 py-3 text-sm text-green-200 text-center">
+            {statusMessage}
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {/* TikTok Button */}
+          <button
+            onClick={handleTikTok}
+            className="w-full rounded-xl px-4 py-4 font-bold text-white shadow-lg transition hover:shadow-xl transform hover:scale-105"
+            style={{ backgroundColor: "#000000" }}
+          >
+            🎵 TikTok
+          </button>
+
+          {/* Instagram Button */}
+          <button
+            onClick={handleInstagram}
+            className="w-full rounded-xl px-4 py-4 font-bold text-white shadow-lg transition hover:shadow-xl transform hover:scale-105"
+            style={{ backgroundColor: "#E1306C" }}
+          >
+            📸 Instagram
+          </button>
+
+          {/* Snapchat Button */}
+          <button
+            onClick={handleSnapchat}
+            className="w-full rounded-xl px-4 py-4 font-bold text-black shadow-lg transition hover:shadow-xl transform hover:scale-105"
+            style={{ backgroundColor: "#FFFC00" }}
+          >
+            👻 Snapchat
+          </button>
+
+          {/* X Button */}
+          <button
+            onClick={handleX}
+            className="w-full rounded-xl px-4 py-4 font-bold text-white shadow-lg transition hover:shadow-xl transform hover:scale-105"
+            style={{ backgroundColor: "#000000" }}
+          >
+            🐦 X
+          </button>
+
           {/* Copy Link Button */}
           <button
             onClick={handleCopyLink}
-            className="w-full rounded-xl px-6 py-4 font-bold text-white bg-gradient-to-r from-orange-500 to-pink-500 shadow-lg transition hover:shadow-xl transform hover:scale-105"
+            className="w-full rounded-xl px-4 py-4 font-bold text-white bg-gradient-to-r from-pink-500 to-orange-500 shadow-lg transition hover:shadow-xl transform hover:scale-105 md:col-span-1 col-span-2"
           >
             📋 Copy Link
-          </button>
-
-          {/* IG Story Button */}
-          <button
-            onClick={handleIGStory}
-            className="w-full rounded-xl px-6 py-4 font-bold text-white bg-gradient-to-r from-purple-500 to-pink-500 shadow-lg transition hover:shadow-xl transform hover:scale-105"
-          >
-            📸 IG Story
-          </button>
-
-          {/* TikTok Comment Button */}
-          <button
-            onClick={handleTikTokComment}
-            className="w-full rounded-xl px-6 py-4 font-bold text-white bg-gradient-to-r from-black to-gray-800 shadow-lg transition hover:shadow-xl transform hover:scale-105"
-          >
-            🎵 TikTok Comment
-          </button>
-
-          {/* X / Post Button */}
-          <button
-            onClick={handleXPost}
-            className="w-full rounded-xl px-6 py-4 font-bold text-white bg-gradient-to-r from-blue-400 to-blue-600 shadow-lg transition hover:shadow-xl transform hover:scale-105"
-          >
-            🐦 X / Post
           </button>
         </div>
 
@@ -123,4 +183,3 @@ export default function ShareHub({ activeLink, name, argument, onClose }) {
     </div>
   );
 }
-

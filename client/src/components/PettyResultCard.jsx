@@ -140,8 +140,8 @@ export default function PettyResultCard({ result, person1Name, person2Name, mode
                 <p className="text-orange-100 text-xs uppercase tracking-wide font-semibold mb-1">
                   CRINGE RATING
                 </p>
-                <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-3">
-                  <span className="text-xl md:text-2xl font-black text-white/80">
+                <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-6 py-4">
+                  <span className="text-5xl md:text-6xl font-black text-white/80">
                     {(() => {
                       const loserScore = mode === "petty" ? cringe : friction;
                       const total = (mode === "petty" ? aura : alignment) + loserScore;
