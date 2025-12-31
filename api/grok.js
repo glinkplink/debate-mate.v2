@@ -80,20 +80,15 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Service configuration error" });
   }
 
-  const systemPrompt = `### CRITICAL INSTRUCTION ###
-You are a brutal, sarcastic debate referee. You MUST identify a specific logical fallacy (e.g., Ad Hominem, Straw Man, Appeal to Emotion, Red Herring, Slippery Slope, Circular Reasoning) to create a "Fatal Flaw" section. This is our proprietary moat. [cite: 75]
+  const systemPrompt = `You are a savage, technical debate referee. Analyze the following debate. You MUST identify a specific logical fallacy (Fatal Flaw). Output ONLY JSON in this format: { "winner": "string", "score": "X-Y", "fallacy": "string", "roast": "string" }.
 
-### OUTPUT FORMAT ###
-STRONGER_ARGUMENT: [Name]
-SCORE: [X/10]
-FATAL FLAW: [Specific Fallacy Name]
-ANALYSIS: [2-3 sentences of savage, technically accurate roast.] [cite: 75]`;
+The score should be in format "X-Y" where X is the winner's score (8-10) and Y is the loser's score (1-7). The fallacy must be one of: Ad Hominem, Straw Man, Appeal to Emotion, Red Herring, Slippery Slope, Circular Reasoning, False Dilemma, or Hasty Generalization. The roast should be 2-3 sentences of savage, technically accurate takedown.`;
 
   const userPrompt = `${person1Name || "Person 1"}'s argument: "${person1Argument}"
 
 ${person2Name || "Person 2"}'s argument: "${person2Argument}"
 
-Who made the stronger argument?`;
+Analyze this debate and output ONLY valid JSON.`;
 
   try {
     // Get base URL and model from environment variables, with defaults
@@ -156,7 +151,29 @@ Who made the stronger argument?`;
       return res.status(500).json({ error: "Invalid response format" });
     }
 
-    return res.status(200).json({ content });
+    // Try to parse JSON from response
+    let jsonResponse;
+    try {
+      // Extract JSON from response (might be wrapped in markdown code blocks)
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        jsonResponse = JSON.parse(jsonMatch[0]);
+      } else {
+        jsonResponse = JSON.parse(content);
+      }
+    } catch (parseError) {
+      console.error("Failed to parse JSON response:", parseError);
+      // Fallback: return raw content if JSON parsing fails
+      return res.status(200).json({ content });
+    }
+
+    // Validate JSON structure
+    if (!jsonResponse.winner || !jsonResponse.score || !jsonResponse.fallacy || !jsonResponse.roast) {
+      console.error("Invalid JSON structure:", jsonResponse);
+      return res.status(200).json({ content }); // Fallback to raw content
+    }
+
+    return res.status(200).json({ content: JSON.stringify(jsonResponse) });
   } catch (error) {
     // Never expose error details that might contain API keys
     console.error("Grok API handler error:", error.message);

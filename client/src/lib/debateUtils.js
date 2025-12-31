@@ -99,28 +99,73 @@ function updateScoreboard(result) {
 export function parseAIResponse(response) {
   if (!response) return null;
   try {
+    // First, try to parse as JSON (new format)
+    try {
+      const jsonData = typeof response === 'string' ? JSON.parse(response) : response;
+      if (jsonData.winner && jsonData.score && jsonData.fallacy && jsonData.roast) {
+        // Parse score from "X-Y" format
+        const scoreMatch = jsonData.score.match(/(\d+)-(\d+)/);
+        const scores = scoreMatch 
+          ? [parseInt(scoreMatch[1], 10), parseInt(scoreMatch[2], 10)]
+          : [8, 6];
+        
+        return {
+          winner: jsonData.winner,
+          scores: scores,
+          analysis: jsonData.roast,
+          fatalFlaw: jsonData.fallacy,
+          score: jsonData.score, // Keep original format
+          fallacy: jsonData.fallacy,
+          roast: jsonData.roast
+        };
+      }
+    } catch (jsonError) {
+      // Not JSON, continue with text parsing
+    }
+
+    // Fallback: parse text format (old format)
     const lines = response.split("\n").map((l) => l.trim()).filter(Boolean);
     let winner = "";
     let scores = [0, 0];
     let analysis = "";
+    let fatalFlaw = "";
 
     for (const line of lines) {
       if (line.toUpperCase().startsWith("STRONGER_ARGUMENT")) {
         winner = line.split(":")[1]?.trim() || "";
       }
       if (line.toUpperCase().startsWith("SCORE")) {
-        const match = line.match(/(\d+)\s*\/\s*10.*?(\d+)\s*\/\s*10/);
-        if (match) {
-          scores = [parseInt(match[1], 10), parseInt(match[2], 10)];
+        // Try to match single score format: "SCORE: 8/10" or "SCORE: [8/10]"
+        const singleMatch = line.match(/(\d+)\s*\/\s*10/);
+        if (singleMatch) {
+          const score = parseInt(singleMatch[1], 10);
+          // If we have a winner, assign score to winner, loser gets lower score
+          if (winner) {
+            scores = [score, Math.max(1, score - 2)]; // Winner gets the score, loser gets 2 points less
+          } else {
+            scores = [score, score];
+          }
+        } else {
+          // Fallback: try to match two scores format
+          const doubleMatch = line.match(/(\d+)\s*\/\s*10.*?(\d+)\s*\/\s*10/);
+          if (doubleMatch) {
+            scores = [parseInt(doubleMatch[1], 10), parseInt(doubleMatch[2], 10)];
+          }
         }
+      }
+      if (line.toUpperCase().startsWith("FATAL FLAW") || line.toUpperCase().startsWith("FATAL_FLAW")) {
+        fatalFlaw = line.split(":")[1]?.trim() || "";
       }
       if (line.toUpperCase().startsWith("ANALYSIS")) {
         analysis = line.split(":")[1]?.trim() || "";
       }
     }
 
-    if (!winner || scores[0] === 0) return null;
-    return { winner, scores, analysis };
+    // If we have winner and score, return parsed data
+    if (winner && scores[0] > 0) {
+      return { winner, scores, analysis, fatalFlaw };
+    }
+    return null;
   } catch (err) {
     console.error("Failed to parse AI response", err);
     return null;

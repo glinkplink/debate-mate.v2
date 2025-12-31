@@ -13,6 +13,8 @@ import { sanitizeInput, validateInputLength, checkRateLimit } from "./lib/securi
 import SocialShareBar from "./components/SocialShareBar";
 import ExportBar from "./components/ExportBar";
 import CommunicationHealthRadar from "./components/CommunicationHealthRadar";
+import PettyResultCard from "./components/PettyResultCard";
+import PettyResultCard from "./components/PettyResultCard";
 
 function App() {
   const [mode, setMode] = useState("petty");
@@ -125,8 +127,12 @@ function App() {
         winner: winnerName,
         winnerScore,
         loserScore,
-        analysis: parsed.analysis || "No detailed analysis provided.",
-        rawResponse: mode === "productive" ? raw : null, // Store raw response for productive mode
+        analysis: parsed.analysis || parsed.roast || "No detailed analysis provided.",
+        fatalFlaw: parsed.fatalFlaw || parsed.fallacy || null, // Store fatal flaw for petty mode
+        score: parsed.score || null, // Store score in "X-Y" format for JSON responses
+        fallacy: parsed.fallacy || null,
+        roast: parsed.roast || null,
+        rawResponse: mode === "productive" ? raw : (mode === "petty" ? raw : null), // Store raw response for both modes
         timestamp: Date.now(),
       };
 
@@ -299,36 +305,16 @@ function App() {
           )}
 
           {result && mode === "petty" && (
-            <section className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-inner space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-white/60">
-                    Winner
-                  </p>
-                  <h2 className="text-2xl font-semibold">{result.winner}</h2>
-                </div>
-                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white/70">
-                  {modeLabel} mode
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-2 text-sm text-white/80">
-                <span className="rounded-lg bg-white/10 px-3 py-1">
-                  {result.person1Name}:{" "}
-                  {result.winner === result.person1Name
-                    ? result.winnerScore
-                    : result.loserScore}
-                  /10
-                </span>
-                <span className="rounded-lg bg-white/10 px-3 py-1">
-                  {result.person2Name}:{" "}
-                  {result.winner === result.person2Name
-                    ? result.winnerScore
-                    : result.loserScore}
-                  /10
-                </span>
-              </div>
-              <p className="text-white/80 leading-relaxed">{result.analysis}</p>
-            </section>
+            <PettyResultCard
+              result={{
+                winner: result.winner,
+                score: result.score || `${result.winnerScore}-${result.loserScore}`,
+                fallacy: result.fatalFlaw || result.fallacy,
+                roast: result.roast || result.analysis
+              }}
+              person1Name={result.person1Name}
+              person2Name={result.person2Name}
+            />
           )}
 
           {result && mode === "productive" && result.rawResponse && (
