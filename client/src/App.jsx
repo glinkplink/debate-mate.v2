@@ -10,6 +10,7 @@ import SocialShareBar from "./components/SocialShareBar";
 import ExportBar from "./components/ExportBar";
 import CommunicationHealthRadar from "./components/CommunicationHealthRadar";
 import PettyResultCard from "./components/PettyResultCard";
+import ShareHub from "./components/ShareHub";
 
 function App() {
   const [mode, setMode] = useState("petty");
@@ -22,6 +23,8 @@ function App() {
   const [result, setResult] = useState(null);
   const [isChallengeMode, setIsChallengeMode] = useState(false);
   const [gauntletSent, setGauntletSent] = useState(false);
+  const [activeLink, setActiveLink] = useState(null);
+  const [showShareHub, setShowShareHub] = useState(false);
 
   useEffect(() => {
     // Check for challenge link data
@@ -194,11 +197,13 @@ function App() {
     setResult(null);
     setIsChallengeMode(false);
     setGauntletSent(false);
+    setActiveLink(null);
+    setShowShareHub(false);
   };
 
-  const handleSendGauntlet = async () => {
+  const handleDropTake = async () => {
     if (!name1 || !text1.trim()) {
-      setError("Please fill in Name and Perspective to send the gauntlet.");
+      setError("Please fill in Name and Perspective to drop your take.");
       return;
     }
     
@@ -210,8 +215,8 @@ function App() {
       }));
       const link = `${window.location.origin}${window.location.pathname}?data=${payload}`;
       
-      await navigator.clipboard.writeText(link);
-      setGauntletSent(true);
+      setActiveLink(link);
+      setShowShareHub(true);
       setError(""); // Clear any previous errors
     } catch (err) {
       console.error("Failed to create link:", err);
@@ -225,7 +230,8 @@ function App() {
       <div className="w-full max-w-2xl space-y-6">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-2">DebateMate</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-2">DropTake</h1>
+          <p className="text-white/70 text-sm mb-3">Settle the score. Collect the Aura.</p>
           <button
             onClick={() =>
               setMode((prev) => (prev === "petty" ? "productive" : "petty"))
@@ -248,12 +254,17 @@ function App() {
           </div>
         )}
 
-        {/* Gauntlet Sent Success State */}
-        {gauntletSent && !isChallengeMode && (
-          <div className="bg-green-500/20 border border-green-500/40 rounded-xl p-4 text-center">
-            <p className="text-green-300 font-semibold mb-1">Gauntlet Sent!</p>
-            <p className="text-green-200 text-sm">Share the link to get a rebuttal</p>
-          </div>
+        {/* Share Hub */}
+        {showShareHub && activeLink && (
+          <ShareHub
+            activeLink={activeLink}
+            name={name1}
+            argument={text1}
+            onClose={() => {
+              setShowShareHub(false);
+              setActiveLink(null);
+            }}
+          />
         )}
 
         {/* Input Fields */}
@@ -336,7 +347,7 @@ function App() {
 
           {/* Primary Action Button */}
           <button
-            onClick={isChallengeMode ? handleAnalyze : handleSendGauntlet}
+            onClick={isChallengeMode ? handleAnalyze : handleDropTake}
             disabled={isChallengeMode ? disableAnalyze : (!name1 || !text1.trim() || loading)}
             className={`w-full rounded-xl px-6 py-4 font-bold text-white bg-gradient-to-r ${accent} shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-xl text-lg`}
           >
@@ -344,7 +355,7 @@ function App() {
               ? "Analyzing..." 
               : isChallengeMode 
                 ? "Rebut & Score Aura" 
-                : "Send the Gauntlet"
+                : "Drop your Take"
             }
           </button>
         </div>

@@ -49,7 +49,7 @@ export default function PettyResultCard({ result, person1Name, person2Name, mode
       });
 
       const link = document.createElement("a");
-      link.download = `debate-mate-${Date.now()}.png`;
+      link.download = `drop-take-${Date.now()}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
     } catch (error) {
@@ -199,7 +199,7 @@ export default function PettyResultCard({ result, person1Name, person2Name, mode
         {/* Footer - Branding */}
         <div className="flex items-center justify-between pt-4 border-t border-white/20">
           <p className="text-orange-100 text-xs font-semibold">
-            DebateMate.ai
+            DropTake.ai
           </p>
           <button
             onClick={async (e) => {
