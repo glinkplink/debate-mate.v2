@@ -240,12 +240,9 @@ function App() {
       <div className="w-full max-w-2xl space-y-6">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-2">DropTake</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">DropTake</h1>
           {!isChallengeMode ? (
-            <>
-              <p className={`text-sm mb-3 font-semibold bg-gradient-to-r ${accent} bg-clip-text text-transparent`}>
-                {modeLabel}: {modeTagline}
-              </p>
+            <div className="space-y-2">
               <button
                 onClick={() =>
                   setMode((prev) => (prev === "petty" ? "productive" : "petty"))
@@ -255,11 +252,16 @@ function App() {
                 <span className="h-2 w-2 rounded-full bg-white" />
                 {modeLabel}
               </button>
-            </>
+              <p className={`text-sm font-semibold bg-gradient-to-r ${accent} bg-clip-text text-transparent`}>
+                {modeTagline}
+              </p>
+            </div>
           ) : (
-            <p className={`text-sm mb-3 font-semibold bg-gradient-to-r ${accent} bg-clip-text text-transparent`}>
-              {modeLabel}: {modeTagline}
-            </p>
+            <div className="space-y-2">
+              <p className={`text-sm font-semibold bg-gradient-to-r ${accent} bg-clip-text text-transparent`}>
+                {modeLabel}: {modeTagline}
+              </p>
+            </div>
           )}
         </div>
 

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo } from "react";
 import html2canvas from "html2canvas";
 import confetti from "canvas-confetti";
 import CommunicationHealthRadar from "./CommunicationHealthRadar";
@@ -26,6 +26,40 @@ export default function PettyResultCard({ result, person1Name, person2Name, mode
 
   const content = contentMap[mode] || contentMap.petty;
 
+  // Parse scores and calculate percentages
+  const { winnerName, loserName, auraPercent, cringePercent, statusTier } = useMemo(() => {
+    const winner = result?.winner || person1Name || "Person 1";
+    const isName1Winner = winner === (person1Name || "Person 1");
+    const winnerName = winner;
+    const loserName = isName1Winner ? (person2Name || "Person 2") : (person1Name || "Person 1");
+    
+    // Calculate percentages based on scores
+    // Winner Aura % + Loser Cringe % = 100%
+    const aura = result?.aura || 8;
+    const cringe = result?.cringe || 6;
+    const total = aura + cringe;
+    
+    // Calculate percentages
+    const auraPercent = total > 0 ? Math.round((aura / total) * 100) : 85;
+    const cringePercent = 100 - auraPercent;
+    
+    // Determine status tier for loser
+    let statusTier = "";
+    if (cringePercent > 90) {
+      statusTier = "COOKED";
+    } else if (cringePercent > 70) {
+      statusTier = "ABSOLUTELY MID";
+    }
+    
+    return { winnerName, loserName, auraPercent, cringePercent, statusTier };
+  }, [result, person1Name, person2Name]);
+
+  const fallacy = result?.fallacy || result?.skill_issue || result?.comm_block || "Logical Fallacy";
+  const roast = result?.roast || result?.insight || "No analysis provided.";
+
+  // Dynamic font size based on text length
+  const roastFontSize = roast.length > 300 ? "text-sm" : "text-base md:text-lg";
+
   // Trigger confetti only if winner exists
   useEffect(() => {
     if (result?.winner && mode === "petty") {
@@ -42,7 +76,7 @@ export default function PettyResultCard({ result, person1Name, person2Name, mode
 
     try {
       const canvas = await html2canvas(cardRef.current, {
-        backgroundColor: null,
+        backgroundColor: "#000000",
         scale: 2,
         useCORS: true,
         logging: false,
@@ -57,26 +91,6 @@ export default function PettyResultCard({ result, person1Name, person2Name, mode
       alert("Failed to download image. Please try again.");
     }
   };
-
-  // Parse score from "X-Y" format
-  const parseScore = (scoreStr) => {
-    if (!scoreStr) return { winner: 0, loser: 0 };
-    const match = scoreStr.match(/(\d+)-(\d+)/);
-    if (match) {
-      return { winner: parseInt(match[1], 10), loser: parseInt(match[2], 10) };
-    }
-    return { winner: 0, loser: 0 };
-  };
-
-  // Parse scores - handle both old and new formats
-  const scores = parseScore(result?.score || (result?.aura ? `${result.aura}-${result.cringe || 0}` : null));
-  const winner = result?.winner || person1Name || "Person 1";
-  const fallacy = result?.fallacy || result?.skill_issue || result?.comm_block || "Logical Fallacy";
-  const roast = result?.roast || result?.insight || "No analysis provided.";
-  const aura = result?.aura || scores.winner;
-  const cringe = result?.cringe || scores.loser;
-  const alignment = result?.alignment || scores.winner;
-  const friction = result?.friction || scores.loser;
 
   // For productive mode, show radar chart instead
   if (mode === "productive" && result?.rawResponse) {
@@ -96,108 +110,95 @@ export default function PettyResultCard({ result, person1Name, person2Name, mode
       {/* Card for display and download - 9:16 aspect ratio for TikTok */}
       <div
         ref={cardRef}
-        className={`relative rounded-3xl bg-gradient-to-br ${content.color} p-8 shadow-2xl mx-auto`}
+        className={`relative rounded-3xl bg-gradient-to-br ${content.color} p-6 shadow-2xl mx-auto overflow-hidden`}
         style={{ 
           width: "100%",
-          maxWidth: "405px", // 9:16 ratio: 405px width = 720px height
+          maxWidth: "405px",
           aspectRatio: "9 / 16",
           minHeight: "720px"
         }}
       >
-        {/* Top Section - Winner and Score */}
-        <div className="text-center mb-6">
-          <p className="text-orange-100 text-sm uppercase tracking-widest font-bold mb-2">
-            Winner
-          </p>
-          <h1 className="text-5xl md:text-6xl font-black text-white mb-6 drop-shadow-lg">
-            {winner}
-          </h1>
-          
-          {/* Aura vs Cringe Display */}
-          <div className="mb-4">
-            <div className="flex items-center justify-center gap-4 mb-4">
-              {/* Winner's AURA */}
-              <div className={`text-center ${mode === "petty" ? "animate-pulse" : ""}`}>
-                <p className="text-orange-100 text-xs uppercase tracking-wide font-semibold mb-1">
-                  AURA
-                </p>
-                <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-6 py-4">
-                  <span className="text-5xl md:text-6xl font-black text-white">
-                    +{mode === "petty" ? aura : alignment}
-                  </span>
-                </div>
+        {/* Head-to-Head Layout */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          {/* Winner Side */}
+          <div className="relative text-center">
+            {/* MAIN CHARACTER Badge */}
+            {auraPercent > 80 && (
+              <div className="absolute -top-2 -right-2 z-10 bg-yellow-400 text-black text-xs font-black px-2 py-1 rounded-full rotate-12 shadow-lg">
+                MAIN CHARACTER
               </div>
-              
-              {/* VS Label */}
-              <div className="flex flex-col items-center">
-                <span className="text-white/60 text-lg md:text-xl font-bold italic">
-                  VS
-                </span>
-              </div>
-              
-              {/* Loser's CRINGE RATING */}
-              <div className={`text-center ${mode === "petty" ? "animate-bounce" : ""}`}>
-                <p className="text-orange-100 text-xs uppercase tracking-wide font-semibold mb-1">
-                  CRINGE RATING
-                </p>
-                <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-6 py-4">
-                  <span className="text-5xl md:text-6xl font-black text-white/80">
-                    {(() => {
-                      const loserScore = mode === "petty" ? cringe : friction;
-                      const total = (mode === "petty" ? aura : alignment) + loserScore;
-                      const percentage = total > 0 ? Math.round((loserScore / total) * 100) : 0;
-                      return `${percentage}%`;
-                    })()}
-                  </span>
-                </div>
-              </div>
-            </div>
+            )}
             
-            {/* Dominance Meter */}
-            <div className="max-w-md mx-auto">
-              <div className="relative h-3 bg-white/10 rounded-full overflow-hidden">
-                {(() => {
-                  const winnerScore = mode === "petty" ? aura : alignment;
-                  const loserScore = mode === "petty" ? cringe : friction;
-                  const total = winnerScore + loserScore;
-                  const dominance = total > 0 ? (winnerScore / total) * 100 : 0;
-                  return (
-                    <>
-                      <div
-                        className={`absolute top-0 left-0 h-full bg-gradient-to-r ${content.color} transition-all duration-500`}
-                        style={{ width: `${dominance}%` }}
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-white/80 text-xs font-bold">
-                          {Math.round(dominance)}% Dominance
-                        </span>
-                      </div>
-                    </>
-                  );
-                })()}
+            <p className="text-white/90 text-xs uppercase tracking-wide font-bold mb-1">
+              {winnerName}
+            </p>
+            <div className="bg-white/20 backdrop-blur-sm rounded-xl px-3 py-3">
+              <p className="text-white/80 text-xs uppercase tracking-wide font-semibold mb-1">
+                AURA
+              </p>
+              <span className="text-4xl md:text-5xl font-black text-white block">
+                {auraPercent}%
+              </span>
+            </div>
+          </div>
+
+          {/* VS Divider */}
+          <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/30 transform -translate-x-1/2" />
+
+          {/* Loser Side */}
+          <div className="relative text-center">
+            {/* Status Stamp */}
+            {statusTier && (
+              <div 
+                className="absolute -top-2 -left-2 z-10 bg-red-600 text-white text-xs font-black px-3 py-2 rounded-lg rotate-[-12deg] shadow-2xl border-2 border-white"
+                style={{ transform: "rotate(-12deg)" }}
+              >
+                {statusTier}
               </div>
+            )}
+            
+            <p className="text-white/90 text-xs uppercase tracking-wide font-bold mb-1">
+              {loserName}
+            </p>
+            <div className="bg-white/20 backdrop-blur-sm rounded-xl px-3 py-3">
+              <p className="text-white/80 text-xs uppercase tracking-wide font-semibold mb-1">
+                CRINGE
+              </p>
+              <span className="text-4xl md:text-5xl font-black text-white/80 block">
+                {cringePercent}%
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Middle Section - SKILL ISSUE Badge */}
-        <div className="flex justify-center mb-6">
-          <div className="bg-orange-500 rounded-full px-6 py-3 shadow-2xl transform hover:scale-105 transition-transform animate-pulse">
-            <p className="text-white font-black text-xl md:text-2xl uppercase tracking-wider">
+        {/* Dominance Bar */}
+        <div className="mb-4">
+          <div className="relative h-2 bg-white/10 rounded-full overflow-hidden">
+            <div
+              className={`absolute top-0 left-0 h-full bg-gradient-to-r ${content.color} transition-all duration-500`}
+              style={{ width: `${auraPercent}%` }}
+            />
+          </div>
+        </div>
+
+        {/* SKILL ISSUE Badge */}
+        <div className="flex justify-center mb-4">
+          <div className="bg-orange-500 rounded-full px-4 py-2 shadow-2xl">
+            <p className="text-white font-black text-sm md:text-base uppercase tracking-wider">
               ⚠️ SKILL ISSUE: {fallacy}
             </p>
           </div>
         </div>
 
-        {/* Bottom Section - Savage Roast */}
-        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 mb-4">
-          <p className="text-white text-base md:text-lg italic leading-relaxed text-center font-medium">
+        {/* Roast Text with Glassmorphism */}
+        <div className="bg-white/15 backdrop-blur-md rounded-2xl p-4 mb-4 flex-1 overflow-hidden">
+          <p className={`text-white ${roastFontSize} italic leading-relaxed text-center font-medium`}>
             "{roast}"
           </p>
         </div>
 
         {/* Footer - Branding */}
-        <div className="flex items-center justify-between pt-4 border-t border-white/20">
+        <div className="flex items-center justify-between pt-3 border-t border-white/20">
           <p className="text-orange-100 text-xs font-semibold">
             DropTake.ai
           </p>
@@ -205,12 +206,12 @@ export default function PettyResultCard({ result, person1Name, person2Name, mode
             onClick={async (e) => {
               e.stopPropagation();
               const shareText = mode === "petty"
-                ? `I just took ${winner}'s aura. Final verdict: ${fallacy}. See the receipts: ${window.location.href}`
+                ? `Just caught a body in AuraWars. 💀 ${winnerName} has ${auraPercent}% Aura, ${loserName} is officially ${statusTier || "cooked"}. Deal with it: ${window.location.href}`
                 : `We're working on it. See our alignment report: ${window.location.href}`;
               
               if (navigator.share) {
                 navigator.share({
-                  title: mode === "petty" ? `${winner} Wins!` : "Communication Report",
+                  title: mode === "petty" ? `${winnerName} Wins!` : "Communication Report",
                   text: shareText,
                   url: window.location.href
                 });
@@ -239,4 +240,3 @@ export default function PettyResultCard({ result, person1Name, person2Name, mode
     </div>
   );
 }
-
