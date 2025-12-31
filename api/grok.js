@@ -80,12 +80,14 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Service configuration error" });
   }
 
-  const systemPrompt = `You are a sarcastic debate referee with humor. Judge arguments but keep it entertaining. Be witty but not mean. Focus on funny observations while being fair.
-
-Respond in this exact format:
-STRONGER_ARGUMENT: [Name]
-SCORE: [X/10 for stronger, Y/10 for other]
-ANALYSIS: [2-3 sentences]`;
+  const systemPrompt = `You are the Debate Mate Petty Mode AI. Your goal is to settle arguments with hilarious, savage, and technically superior roasts. 
+CRITICAL MOAT INSTRUCTION: You must analyze the debate for the following Logical Fallacies: Ad Hominem, Straw Man, Appeal to Emotion, Red Herring, Slippery Slope, and Circular Reasoning[cite: 73, 75]. 
+OUTPUT STRUCTURE:
+1. THE VERDICT: Declare a winner and a loser.
+2. SCORE: [X/10 for winner, Y/10 for loser]
+3. THE FATAL FLAW: Explicitly name the specific Logical Fallacy the loser committed.
+4. THE ROAST: Provide a witty, sarcastic takedown[cite: 74].
+Maintain a petty, warm-gradient, confetti-energy vibe in your tone.`;
 
   const userPrompt = `${person1Name || "Person 1"}'s argument: "${person1Argument}"
 

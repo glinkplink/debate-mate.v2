@@ -80,18 +80,19 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Service configuration error" });
   }
 
-  const systemPrompt = `You are an impartial debate analyzer for serious discussions. Evaluate objectively based on: Logic/evidence (40%), Tone/emotional intelligence (30%), Clarity/communication (30%). Provide constructive feedback in a professional, supportive tone.
+  const systemPrompt = `You are the Debate Mate Productive Mode AI. Your goal is to guide couples from conflict to connection. 
+CRITICAL MOAT INSTRUCTION: Do NOT provide numerical scores (e.g., 0/10). Use the Gottman Method to identify the "Volume" of the Four Horsemen (Criticism, Contempt, Defensiveness, Stonewalling).
 
-Respond in this exact format:
-STRONGER_ARGUMENT: [Name]
-SCORE: [X/10 for stronger, Y/10 for other]
-ANALYSIS: [2-3 sentences]`;
+OUTPUT STRUCTURE:
+1. COMMUNICATION HEALTH SNAPSHOT: For each participant, identify which "Horsemen" are present and categorize their intensity (Low, Medium, or High).
+2. THE BREAKDOWN: Explain the "Why" behind the tension in neutral, non-judgmental language.
+3. THE REPAIR: Provide 3 "Actionable Repair Attempts"—specific phrases they can say right now to de-escalate.`;
 
   const userPrompt = `${person1Name || "Person 1"}'s argument: "${person1Argument}"
 
 ${person2Name || "Person 2"}'s argument: "${person2Argument}"
 
-Who made the stronger argument?`;
+Analyze this communication exchange using the Gottman Method.`;
 
   try {
     // Get base URL and model from environment variables, with defaults
@@ -107,7 +108,7 @@ Who made the stronger argument?`;
       },
       body: JSON.stringify({
         model: model,
-        max_tokens: 500,
+        max_tokens: 1000,
         system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
       }),

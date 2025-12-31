@@ -12,6 +12,7 @@ import {
 import { sanitizeInput, validateInputLength, checkRateLimit } from "./lib/security";
 import SocialShareBar from "./components/SocialShareBar";
 import ExportBar from "./components/ExportBar";
+import CommunicationHealthRadar from "./components/CommunicationHealthRadar";
 
 function App() {
   const [mode, setMode] = useState("petty");
@@ -90,17 +91,29 @@ function App() {
         sanitizedText2
       );
 
-      const parsed = parseAIResponse(raw) || {
-        winner: name1 || "Person 1",
-        scores: [8, 6],
-        analysis: "Quick take: solid points on both sides.",
-      };
-
-      const [scoreA, scoreB] = parsed.scores;
-      const winnerName = parsed.winner || name1 || "Person 1";
-      const isName1Winner = winnerName === (name1 || "Person 1");
-      const winnerScore = isName1Winner ? scoreA : scoreB;
-      const loserScore = isName1Winner ? scoreB : scoreA;
+      // For productive mode, don't parse scores (new format doesn't use them)
+      let parsed;
+      let winnerName, winnerScore, loserScore;
+      
+      if (mode === "productive") {
+        // Productive mode uses Gottman Method, no winner/scores
+        parsed = { analysis: raw };
+        winnerName = "Both participants";
+        winnerScore = 0;
+        loserScore = 0;
+      } else {
+        // Petty mode uses old parsing
+        parsed = parseAIResponse(raw) || {
+          winner: name1 || "Person 1",
+          scores: [8, 6],
+          analysis: "Quick take: solid points on both sides.",
+        };
+        const [scoreA, scoreB] = parsed.scores;
+        winnerName = parsed.winner || name1 || "Person 1";
+        const isName1Winner = winnerName === (name1 || "Person 1");
+        winnerScore = isName1Winner ? scoreA : scoreB;
+        loserScore = isName1Winner ? scoreB : scoreA;
+      }
 
       const resultEntry = {
         id: `${Date.now()}`,
@@ -113,6 +126,7 @@ function App() {
         winnerScore,
         loserScore,
         analysis: parsed.analysis || "No detailed analysis provided.",
+        rawResponse: mode === "productive" ? raw : null, // Store raw response for productive mode
         timestamp: Date.now(),
       };
 
@@ -120,7 +134,9 @@ function App() {
       
       // Save to unified history
       const inputText = `${name1 || "Person 1"}: ${text1} vs ${name2 || "Person 2"}: ${text2}`;
-      const resultText = `${winnerName} wins (${winnerScore}/10 vs ${loserScore}/10). ${parsed.analysis || "No detailed analysis provided."}`;
+      const resultText = mode === "productive" 
+        ? parsed.analysis || "No detailed analysis provided."
+        : `${winnerName} wins (${winnerScore}/10 vs ${loserScore}/10). ${parsed.analysis || "No detailed analysis provided."}`;
       saveToHistory(mode, inputText, resultText);
       
       setResult(resultEntry);
@@ -274,7 +290,15 @@ function App() {
             </div>
           )}
 
-          {result && (
+          {result && mode === "productive" && result.rawResponse && (
+            <CommunicationHealthRadar 
+              claudeResponse={result.rawResponse}
+              person1Name={result.person1Name}
+              person2Name={result.person2Name}
+            />
+          )}
+
+          {result && mode === "petty" && (
             <section className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-inner space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <div>
@@ -304,6 +328,62 @@ function App() {
                 </span>
               </div>
               <p className="text-white/80 leading-relaxed">{result.analysis}</p>
+            </section>
+          )}
+
+          {result && mode === "productive" && result.rawResponse && (
+            <section className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-inner space-y-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white/70">
+                  {modeLabel} mode
+                </span>
+              </div>
+              
+              {/* Parse and display sections */}
+              {(() => {
+                const response = result.rawResponse || "";
+                const breakdownMatch = response.match(/THE BREAKDOWN:?[\s\S]*?(?=THE REPAIR|ACTIONABLE|$)/i);
+                const repairMatch = response.match(/THE REPAIR:?[\s\S]*?(?=$)/i);
+                
+                return (
+                  <>
+                    {breakdownMatch && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-white mb-2">The Breakdown</h3>
+                        <p className="text-white/80 leading-relaxed whitespace-pre-wrap">
+                          {breakdownMatch[0].replace(/THE BREAKDOWN:?/i, "").trim()}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {repairMatch && (
+                      <div className="relative">
+                        <div className="blur-sm select-none pointer-events-none">
+                          <h3 className="text-lg font-semibold text-white mb-2">The Repair</h3>
+                          <p className="text-white/80 leading-relaxed whitespace-pre-wrap">
+                            {repairMatch[0].replace(/THE REPAIR:?/i, "").trim()}
+                          </p>
+                        </div>
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm rounded-lg">
+                          <div className="text-center p-6">
+                            <h4 className="text-xl font-semibold text-white mb-2">Unlock Expert Resolution Plan</h4>
+                            <p className="text-white/80 mb-4 text-sm">Get personalized repair attempts and conflict resolution strategies</p>
+                            <button 
+                              onClick={() => {
+                                // Handle subscription/paywall logic here
+                                alert("Redirecting to subscription page...");
+                              }}
+                              className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-sky-500 text-white font-semibold rounded-lg hover:from-indigo-600 hover:to-sky-600 transition-all shadow-lg"
+                            >
+                              Subscribe - $19/mo
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </section>
           )}
 
