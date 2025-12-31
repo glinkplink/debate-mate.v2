@@ -45,7 +45,6 @@ export default function SocialShareBar({ result, mode }) {
   };
 
   const handleFacebook = () => {
-    // FacebookShareButton should handle this, but we'll ensure it works
     const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`;
     window.open(fbUrl, "_blank", "noopener,noreferrer");
   };

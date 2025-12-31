@@ -1,6 +1,8 @@
 # Dependencies
 **/node_modules
 .pnpm-store/
+package-lock.json
+yarn.lock
 .env
 .env.local
 .env*.local

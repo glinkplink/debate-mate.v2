@@ -13,8 +13,7 @@
     "@vercel/analytics": "^1.6.1",
     "dompurify": "^3.0.8",
     "react": "^19.2.1",
-    "react-dom": "^19.2.1",
-    "react-share": "^4.4.1"
+    "react-dom": "^19.2.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.3",

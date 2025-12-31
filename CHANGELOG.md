@@ -3,8 +3,8 @@
 ## 🔒 Security Improvements
 
 ### API Key Validation
-- **gemini.js**: Added placeholder detection (`your-gemini-api-key-here`, `placeholder`)
-- **gemini.js**: Added format validation (must be at least 20 chars)
+- **grok.js**: Added placeholder detection (`your-grok-api-key-here`, `placeholder`)
+- **grok.js**: Added format validation (must be at least 20 chars)
 - **claude.js**: Added placeholder detection (`your-claude-api-key-here`, `placeholder`)
 - **claude.js**: Added format validation (must start with `sk-ant-` and be at least 20 chars)
 - Prevents deployment with invalid or missing API keys
@@ -77,12 +77,12 @@ Install with: `pnpm install`
    - Added `object-src 'none'`
    - Added `upgrade-insecure-requests`
 
-3. **api/gemini.js**
+3. **api/grok.js**
    - Enhanced API key validation
    - Placeholder detection
    - Format validation
 
-4. **api/analyze/claude.js**
+4. **api/claude.js**
    - Enhanced API key validation
    - Placeholder detection
    - Format validation
@@ -115,7 +115,7 @@ Install with: `pnpm install`
    ```
 
 2. **Set environment variables in Vercel**:
-   - `GEMINI_API_KEY` (must be 20+ characters)
+   - `GROK_API_KEY` (must be 20+ characters)
    - `CLAUDE_API_KEY` (must start with `sk-ant-`)
    - ⚠️ Must be real keys, not placeholders
 

@@ -3,8 +3,8 @@
 ## ✅ Security Fixes Applied
 
 1. ✅ **API Key Security**: Server-side validation with placeholder detection
-   - Checks for `your-gemini-api-key-here`, `your-claude-api-key-here`, or `placeholder`
-   - Format validation (Gemini: 20+ chars, Claude: `sk-ant-*`)
+   - Checks for `your-grok-api-key-here`, `your-claude-api-key-here`, or `placeholder`
+   - Format validation (Grok: 20+ chars, Claude: `sk-ant-*`)
    - Prevents deployment with invalid keys
 2. ✅ **Input Sanitization**: DOMPurify installed and applied to all user inputs
 3. ✅ **CSP Headers**: Enhanced Content Security Policy in vercel.json
@@ -25,7 +25,7 @@ git add . && git commit -m "Security hardening: CSP, input sanitization, rate li
 
 ### 1. Environment Variables (Vercel Dashboard)
 Set these in **Vercel → Settings → Environment Variables**:
-- `GEMINI_API_KEY` (server-side only, no VITE_ prefix)
+- `GROK_API_KEY` (server-side only, no VITE_ prefix)
 - `CLAUDE_API_KEY` (server-side only, no VITE_ prefix)
 
 **Remove any old `VITE_*` prefixed variables** - they're no longer needed.
@@ -40,8 +40,8 @@ See: https://vercel.com/docs/security
 
 ### 3. Verify API Routes
 After deployment, test:
-- `/api/gemini` (Petty mode)
-- `/api/analyze/claude` (Productive mode)
+- `/api/grok` (Petty mode)
+- `/api/claude` (Productive mode)
 
 Both should return JSON responses without exposing API keys.
 
