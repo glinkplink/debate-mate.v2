@@ -80,9 +80,9 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Service configuration error" });
   }
 
-  const systemPrompt = `You are a savage, technical debate referee. Analyze the following debate. You MUST identify a specific logical fallacy (Fatal Flaw). Output ONLY JSON in this format: { "winner": "string", "score": "X-Y", "fallacy": "string", "roast": "string" }.
+  const systemPrompt = `You are a savage, technical debate referee. Analyze the following debate. You MUST identify a specific logical fallacy (Fatal Flaw). Output ONLY JSON in this format: { "winner": "string", "aura": number, "cringe": number, "skill_issue": "string", "roast": "string" }.
 
-The score should be in format "X-Y" where X is the winner's score (8-10) and Y is the loser's score (1-7). The fallacy must be one of: Ad Hominem, Straw Man, Appeal to Emotion, Red Herring, Slippery Slope, Circular Reasoning, False Dilemma, or Hasty Generalization. The roast should be 2-3 sentences of savage, technically accurate takedown.`;
+The "aura" should be a number 8-10 representing the winner's logic score. The "cringe" should be a number 1-7 representing the loser's fallacy rating. The "skill_issue" must be one of: Ad Hominem, Straw Man, Appeal to Emotion, Red Herring, Slippery Slope, Circular Reasoning, False Dilemma, or Hasty Generalization. The roast should be 2-3 sentences of savage, technically accurate takedown.`;
 
   const userPrompt = `${person1Name || "Person 1"}'s argument: "${person1Argument}"
 

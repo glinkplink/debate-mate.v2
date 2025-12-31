@@ -81,12 +81,11 @@ export default async function handler(req, res) {
   }
 
   const systemPrompt = `You are the Debate Mate Productive Mode AI. Your goal is to guide couples from conflict to connection. 
-CRITICAL MOAT INSTRUCTION: Do NOT provide numerical scores (e.g., 0/10). Use the Gottman Method to identify the "Volume" of the Four Horsemen (Criticism, Contempt, Defensiveness, Stonewalling).
+CRITICAL MOAT INSTRUCTION: Use the Gottman Method to identify the "Volume" of the Four Horsemen (Criticism, Contempt, Defensiveness, Stonewalling).
 
-OUTPUT STRUCTURE:
-1. COMMUNICATION HEALTH SNAPSHOT: For each participant, identify which "Horsemen" are present and categorize their intensity (Low, Medium, or High).
-2. THE BREAKDOWN: Explain the "Why" behind the tension in neutral, non-judgmental language.
-3. THE REPAIR: Provide 3 "Actionable Repair Attempts"—specific phrases they can say right now to de-escalate.`;
+Output ONLY JSON in this format: { "alignment": number, "friction": number, "comm_block": "string", "insight": "string", "radarData": { "user": { "Criticism": number, "Contempt": number, "Defensiveness": number, "Stonewalling": number }, "partner": { "Criticism": number, "Contempt": number, "Defensiveness": number, "Stonewalling": number } } }.
+
+The "alignment" should be a number 1-10 representing communication health. The "friction" should be a number 1-10 representing conflict intensity. The "comm_block" must identify the primary communication barrier. The "insight" should be 2-3 sentences explaining the breakdown. The "radarData" should contain scores 0-10 for each Horseman for both participants (Low=2, Medium=5, High=8).`;
 
   const userPrompt = `${person1Name || "Person 1"}'s argument: "${person1Argument}"
 
@@ -153,7 +152,29 @@ Analyze this communication exchange using the Gottman Method.`;
       return res.status(500).json({ error: "Invalid response format" });
     }
 
-    return res.status(200).json({ content });
+    // Try to parse JSON from response
+    let jsonResponse;
+    try {
+      // Extract JSON from response (might be wrapped in markdown code blocks)
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        jsonResponse = JSON.parse(jsonMatch[0]);
+      } else {
+        jsonResponse = JSON.parse(content);
+      }
+    } catch (parseError) {
+      console.error("Failed to parse JSON response:", parseError);
+      // Fallback: return raw content if JSON parsing fails
+      return res.status(200).json({ content });
+    }
+
+    // Validate JSON structure
+    if (!jsonResponse.alignment || jsonResponse.friction === undefined || !jsonResponse.comm_block || !jsonResponse.insight) {
+      console.error("Invalid JSON structure:", jsonResponse);
+      return res.status(200).json({ content }); // Fallback to raw content
+    }
+
+    return res.status(200).json({ content: JSON.stringify(jsonResponse) });
   } catch (error) {
     // Never expose error details that might contain API keys
     console.error("Claude API handler error:", error.message);

@@ -96,14 +96,42 @@ function updateScoreboard(result) {
   localStorage.setItem(SCOREBOARD_KEY, JSON.stringify(board));
 }
 
-export function parseAIResponse(response) {
+export function parseAIResponse(response, mode = "petty") {
   if (!response) return null;
   try {
     // First, try to parse as JSON (new format)
     try {
       const jsonData = typeof response === 'string' ? JSON.parse(response) : response;
-      if (jsonData.winner && jsonData.score && jsonData.fallacy && jsonData.roast) {
-        // Parse score from "X-Y" format
+      
+      // Petty mode JSON format: { winner, aura, cringe, skill_issue, roast }
+      if (mode === "petty" && jsonData.winner && jsonData.aura !== undefined) {
+        return {
+          winner: jsonData.winner,
+          scores: [jsonData.aura, jsonData.cringe || 0],
+          analysis: jsonData.roast,
+          fatalFlaw: jsonData.skill_issue,
+          score: `${jsonData.aura}-${jsonData.cringe || 0}`,
+          fallacy: jsonData.skill_issue,
+          roast: jsonData.roast,
+          aura: jsonData.aura,
+          cringe: jsonData.cringe
+        };
+      }
+      
+      // Productive mode JSON format: { alignment, friction, comm_block, insight, radarData }
+      if (mode === "productive" && jsonData.alignment !== undefined) {
+        return {
+          alignment: jsonData.alignment,
+          friction: jsonData.friction,
+          comm_block: jsonData.comm_block,
+          insight: jsonData.insight,
+          radarData: jsonData.radarData,
+          analysis: jsonData.insight
+        };
+      }
+      
+      // Legacy format: { winner, score, fallacy, roast }
+      if (jsonData.winner && jsonData.score) {
         const scoreMatch = jsonData.score.match(/(\d+)-(\d+)/);
         const scores = scoreMatch 
           ? [parseInt(scoreMatch[1], 10), parseInt(scoreMatch[2], 10)]
@@ -114,7 +142,7 @@ export function parseAIResponse(response) {
           scores: scores,
           analysis: jsonData.roast,
           fatalFlaw: jsonData.fallacy,
-          score: jsonData.score, // Keep original format
+          score: jsonData.score,
           fallacy: jsonData.fallacy,
           roast: jsonData.roast
         };

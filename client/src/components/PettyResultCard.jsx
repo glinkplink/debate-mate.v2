@@ -1,8 +1,41 @@
-import React, { useRef } from "react";
+import React, { useRef, useEffect } from "react";
 import html2canvas from "html2canvas";
+import confetti from "canvas-confetti";
+import CommunicationHealthRadar from "./CommunicationHealthRadar";
 
-export default function PettyResultCard({ result, person1Name, person2Name }) {
+export default function PettyResultCard({ result, person1Name, person2Name, mode = "petty" }) {
   const cardRef = useRef(null);
+
+  // Content map for conditional branding
+  const contentMap = {
+    petty: {
+      title1: "AURA",
+      title2: "CRINGE RATING",
+      flawLabel: "SKILL ISSUE",
+      color: "from-orange-400 to-pink-600",
+      shareText: "Post Receipts"
+    },
+    productive: {
+      title1: "ALIGNMENT",
+      title2: "FRICTION",
+      flawLabel: "COMMUNICATION BLOCK",
+      color: "from-blue-500 to-teal-400",
+      shareText: "Share Progress"
+    }
+  };
+
+  const content = contentMap[mode] || contentMap.petty;
+
+  // Trigger confetti only if winner exists
+  useEffect(() => {
+    if (result?.winner && mode === "petty") {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+    }
+  }, [result?.winner, mode]);
 
   const handleDownload = async () => {
     if (!cardRef.current) return;
@@ -35,17 +68,35 @@ export default function PettyResultCard({ result, person1Name, person2Name }) {
     return { winner: 0, loser: 0 };
   };
 
-  const scores = parseScore(result?.score);
+  // Parse scores - handle both old and new formats
+  const scores = parseScore(result?.score || (result?.aura ? `${result.aura}-${result.cringe || 0}` : null));
   const winner = result?.winner || person1Name || "Person 1";
-  const fallacy = result?.fallacy || "Logical Fallacy";
-  const roast = result?.roast || "No analysis provided.";
+  const fallacy = result?.fallacy || result?.skill_issue || result?.comm_block || "Logical Fallacy";
+  const roast = result?.roast || result?.insight || "No analysis provided.";
+  const aura = result?.aura || scores.winner;
+  const cringe = result?.cringe || scores.loser;
+  const alignment = result?.alignment || scores.winner;
+  const friction = result?.friction || scores.loser;
+
+  // For productive mode, show radar chart instead
+  if (mode === "productive" && result?.rawResponse) {
+    return (
+      <div className="mt-6 space-y-4">
+        <CommunicationHealthRadar
+          claudeResponse={result.rawResponse}
+          person1Name={person1Name}
+          person2Name={person2Name}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="mt-6 space-y-4">
       {/* Card for display and download */}
       <div
         ref={cardRef}
-        className="relative rounded-3xl bg-gradient-to-br from-orange-400 via-pink-500 to-orange-600 p-8 shadow-2xl"
+        className={`relative rounded-3xl bg-gradient-to-br ${content.color} p-8 shadow-2xl`}
         style={{ minHeight: "500px" }}
       >
         {/* Top Section - Winner and Score */}
@@ -63,14 +114,14 @@ export default function PettyResultCard({ result, person1Name, person2Name }) {
               Power Gap
             </p>
             <div className="flex items-center justify-center gap-4 mb-4">
-              {/* Winner's Logic Score */}
-              <div className="text-center">
+              {/* Winner's Score */}
+              <div className={`text-center ${mode === "petty" ? "animate-pulse" : ""}`}>
                 <p className="text-orange-100 text-xs uppercase tracking-wide font-semibold mb-1">
-                  Logic Score
+                  {content.title1}
                 </p>
                 <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-6 py-4">
                   <span className="text-5xl md:text-6xl font-black text-white">
-                    {scores.winner}
+                    {mode === "petty" ? aura : alignment}
                   </span>
                 </div>
               </div>
@@ -82,14 +133,14 @@ export default function PettyResultCard({ result, person1Name, person2Name }) {
                 </span>
               </div>
               
-              {/* Loser's Fallacy Rating */}
-              <div className="text-center">
+              {/* Loser's Score */}
+              <div className={`text-center ${mode === "petty" ? "animate-bounce" : ""}`}>
                 <p className="text-orange-100 text-xs uppercase tracking-wide font-semibold mb-1">
-                  Fallacy Rating
+                  {content.title2}
                 </p>
                 <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-3">
                   <span className="text-xl md:text-2xl font-black text-white/80">
-                    {scores.loser}
+                    {mode === "petty" ? cringe : friction}
                   </span>
                 </div>
               </div>
@@ -98,15 +149,25 @@ export default function PettyResultCard({ result, person1Name, person2Name }) {
             {/* Dominance Meter */}
             <div className="max-w-md mx-auto">
               <div className="relative h-3 bg-white/10 rounded-full overflow-hidden">
-                <div
-                  className="absolute top-0 left-0 h-full bg-gradient-to-r from-orange-400 to-pink-500 transition-all duration-500"
-                  style={{ width: `${(scores.winner / (scores.winner + scores.loser)) * 100}%` }}
-                />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-white/80 text-xs font-bold">
-                    {Math.round((scores.winner / (scores.winner + scores.loser)) * 100)}% Dominance
-                  </span>
-                </div>
+                {(() => {
+                  const winnerScore = mode === "petty" ? aura : alignment;
+                  const loserScore = mode === "petty" ? cringe : friction;
+                  const total = winnerScore + loserScore;
+                  const dominance = total > 0 ? (winnerScore / total) * 100 : 0;
+                  return (
+                    <>
+                      <div
+                        className={`absolute top-0 left-0 h-full bg-gradient-to-r ${content.color} transition-all duration-500`}
+                        style={{ width: `${dominance}%` }}
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-white/80 text-xs font-bold">
+                          {Math.round(dominance)}% Dominance
+                        </span>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -116,7 +177,7 @@ export default function PettyResultCard({ result, person1Name, person2Name }) {
         <div className="flex justify-center mb-6">
           <div className="bg-orange-500 rounded-full px-8 py-4 shadow-2xl transform hover:scale-105 transition-transform animate-pulse">
             <p className="text-white font-black text-2xl md:text-3xl uppercase tracking-wider">
-              ⚠️ Fatal Flaw: {fallacy}
+              ⚠️ {content.flawLabel}: {fallacy}
             </p>
           </div>
         </div>
@@ -134,24 +195,27 @@ export default function PettyResultCard({ result, person1Name, person2Name }) {
             DebateMate.ai
           </p>
           <button
-            onClick={(e) => {
+            onClick={async (e) => {
               e.stopPropagation();
-              // Share functionality - can be enhanced later
+              const shareText = mode === "petty"
+                ? `I just took ${winner}'s aura. Final verdict: ${fallacy}. See the receipts: ${window.location.href}`
+                : `We're working on it. See our alignment report: ${window.location.href}`;
+              
               if (navigator.share) {
                 navigator.share({
-                  title: `${winner} Wins!`,
-                  text: `Check out this savage debate result on DebateMate.ai`,
+                  title: mode === "petty" ? `${winner} Wins!` : "Communication Report",
+                  text: shareText,
                   url: window.location.href
                 });
               } else {
                 // Fallback: copy to clipboard
-                navigator.clipboard.writeText(window.location.href);
+                await navigator.clipboard.writeText(shareText);
                 alert("Link copied to clipboard!");
               }
             }}
             className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-xs font-bold rounded-full transition-all backdrop-blur-sm"
           >
-            Share to Settle
+            {content.shareText}
           </button>
         </div>
       </div>
