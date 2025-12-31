@@ -77,15 +77,15 @@ export default async function handler(req, res) {
   }
 
   // Check API key (never expose in errors)
-  const apiKey = process.env.VITE_GROK_API_KEY;
+  const apiKey = process.env.GROK_API_KEY;
   if (!apiKey || apiKey.trim() === "" || apiKey === "your-grok-api-key-here" || apiKey.includes("placeholder")) {
-    console.error("VITE_GROK_API_KEY environment variable is not set or is a placeholder");
+    console.error("GROK_API_KEY environment variable is not set or is a placeholder");
     return res.status(500).json({ error: "Service configuration error" });
   }
   
   // Additional validation: ensure API key format is reasonable
   if (apiKey.length < 20) {
-    console.error("VITE_GROK_API_KEY appears to be invalid format (length:", apiKey.length, ")");
+    console.error("GROK_API_KEY appears to be invalid format (length:", apiKey.length, ")");
     return res.status(500).json({ error: "Service configuration error" });
   }
 
@@ -104,8 +104,8 @@ Who made the stronger argument?`;
 
   try {
     // Get base URL and model from environment variables, with defaults
-    const baseUrl = process.env.VITE_GROK_BASE_URL || "https://api.x.ai/v1/chat/completions";
-    const model = process.env.VITE_GROK_MODEL || "grok-4-1-fast-non-reasoning";
+    const baseUrl = process.env.GROK_BASE_URL || "https://api.x.ai/v1/chat/completions";
+    const model = process.env.GROK_MODEL || "grok-4-1-fast-non-reasoning";
 
     const response = await fetch(baseUrl, {
       method: "POST",

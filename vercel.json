@@ -3,6 +3,11 @@
   "buildCommand": "pnpm build",
   "installCommand": "pnpm install --no-frozen-lockfile",
   "outputDirectory": "dist",
+  "functions": {
+    "api/*.js": {
+      "runtime": "nodejs20.x"
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",
