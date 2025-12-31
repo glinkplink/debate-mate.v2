@@ -53,20 +53,69 @@ export default function PettyResultCard({ result, person1Name, person2Name }) {
           <p className="text-orange-100 text-sm uppercase tracking-widest font-bold mb-2">
             Winner
           </p>
-          <h1 className="text-6xl md:text-7xl font-black text-white mb-4 drop-shadow-lg">
+          <h1 className="text-6xl md:text-7xl font-black text-white mb-6 drop-shadow-lg">
             {winner}
           </h1>
-          <div className="inline-flex items-center gap-3 bg-white/20 backdrop-blur-sm rounded-full px-6 py-3">
-            <span className="text-3xl md:text-4xl font-bold text-white">
-              {scores.winner}-{scores.loser}
-            </span>
+          
+          {/* Power Gap Display */}
+          <div className="mb-4">
+            <p className="text-orange-200 text-xs uppercase tracking-widest font-semibold mb-3">
+              Power Gap
+            </p>
+            <div className="flex items-center justify-center gap-4 mb-4">
+              {/* Winner's Logic Score */}
+              <div className="text-center">
+                <p className="text-orange-100 text-xs uppercase tracking-wide font-semibold mb-1">
+                  Logic Score
+                </p>
+                <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-6 py-4">
+                  <span className="text-5xl md:text-6xl font-black text-white">
+                    {scores.winner}
+                  </span>
+                </div>
+              </div>
+              
+              {/* VS Label */}
+              <div className="flex flex-col items-center">
+                <span className="text-white/60 text-lg md:text-xl font-bold italic">
+                  VS
+                </span>
+              </div>
+              
+              {/* Loser's Fallacy Rating */}
+              <div className="text-center">
+                <p className="text-orange-100 text-xs uppercase tracking-wide font-semibold mb-1">
+                  Fallacy Rating
+                </p>
+                <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-3">
+                  <span className="text-xl md:text-2xl font-black text-white/80">
+                    {scores.loser}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Dominance Meter */}
+            <div className="max-w-md mx-auto">
+              <div className="relative h-3 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className="absolute top-0 left-0 h-full bg-gradient-to-r from-orange-400 to-pink-500 transition-all duration-500"
+                  style={{ width: `${(scores.winner / (scores.winner + scores.loser)) * 100}%` }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-white/80 text-xs font-bold">
+                    {Math.round((scores.winner / (scores.winner + scores.loser)) * 100)}% Dominance
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Middle Section - Fatal Flaw Badge */}
         <div className="flex justify-center mb-6">
-          <div className="bg-orange-500 rounded-full px-6 py-3 shadow-lg transform hover:scale-105 transition-transform">
-            <p className="text-white font-bold text-lg md:text-xl uppercase tracking-wide">
+          <div className="bg-orange-500 rounded-full px-8 py-4 shadow-2xl transform hover:scale-105 transition-transform animate-pulse">
+            <p className="text-white font-black text-2xl md:text-3xl uppercase tracking-wider">
               ⚠️ Fatal Flaw: {fallacy}
             </p>
           </div>
