@@ -14,8 +14,6 @@ import ShareHub from "./components/ShareHub";
 
 function App() {
   const [mode, setMode] = useState("petty");
-  const [name1, setName1] = useState("");
-  const [name2, setName2] = useState("");
   const [text1, setText1] = useState("");
   const [text2, setText2] = useState("");
   const [loading, setLoading] = useState(false);
@@ -33,22 +31,14 @@ function App() {
     if (dataParam) {
       try {
         const decoded = JSON.parse(window.atob(dataParam));
-        if (decoded.mode && decoded.p1Name && decoded.p1Arg) {
+        if (decoded.mode && decoded.p1Arg) {
           setMode(decoded.mode);
-          setName1(decoded.p1Name);
           setText1(decoded.p1Arg);
           setIsChallengeMode(true);
-          return; // Don't auto-fill if in challenge mode
         }
       } catch (err) {
         console.error("Failed to parse challenge data:", err);
       }
-    }
-    
-    // Social auto-fill from referrer (only if not in challenge mode)
-    const userParam = urlParams.get('user');
-    if (userParam) {
-      setName1(userParam);
     }
   }, []);
 
@@ -85,8 +75,6 @@ function App() {
     setError("");
 
     // Sanitize and validate inputs
-    const sanitizedName1 = sanitizeInput(name1 || "Person 1");
-    const sanitizedName2 = sanitizeInput(name2 || "Person 2");
     const sanitizedText1 = validateInputLength(text1, MAX_LENGTH);
     const sanitizedText2 = validateInputLength(text2, MAX_LENGTH);
 
@@ -99,9 +87,9 @@ function App() {
     try {
       const raw = await analyzeDebate(
         mode,
-        sanitizedName1,
+        "Person 1",
         sanitizedText1,
-        sanitizedName2,
+        "Person 2",
         sanitizedText2
       );
 
@@ -129,7 +117,7 @@ function App() {
         // Petty mode
         if (!parsed) {
           parsed = {
-            winner: name1 || "Person 1",
+            winner: "Person 1",
             scores: [8, 6],
             analysis: "Quick take: solid points on both sides.",
             aura: 8,
@@ -137,8 +125,8 @@ function App() {
           };
         }
         const [scoreA, scoreB] = parsed.scores || [parsed.aura || 8, parsed.cringe || 6];
-        winnerName = parsed.winner || name1 || "Person 1";
-        const isName1Winner = winnerName === (name1 || "Person 1");
+        winnerName = parsed.winner || "Person 1";
+        const isName1Winner = winnerName === "Person 1";
         winnerScore = isName1Winner ? scoreA : scoreB;
         loserScore = isName1Winner ? scoreB : scoreA;
       }
@@ -146,8 +134,8 @@ function App() {
       const resultEntry = {
         id: `${Date.now()}`,
         mode,
-        person1Name: name1 || "Person 1",
-        person2Name: name2 || "Person 2",
+        person1Name: "Person 1",
+        person2Name: "Person 2",
         person1Argument: text1,
         person2Argument: text2,
         winner: winnerName,
@@ -175,7 +163,7 @@ function App() {
       saveDebateResult(resultEntry);
       
       // Save to unified history
-      const inputText = `${name1 || "Person 1"}: ${text1} vs ${name2 || "Person 2"}: ${text2}`;
+      const inputText = `Person 1: ${text1} vs Person 2: ${text2}`;
       const resultText = mode === "productive" 
         ? parsed.analysis || "No detailed analysis provided."
         : `${winnerName} wins (${winnerScore}/10 vs ${loserScore}/10). ${parsed.analysis || "No detailed analysis provided."}`;
@@ -200,8 +188,6 @@ function App() {
   };
 
   const handleReset = () => {
-    setName1("");
-    setName2("");
     setText1("");
     setText2("");
     setResult(null);
@@ -212,15 +198,14 @@ function App() {
   };
 
   const handleDropTake = async () => {
-    if (!name1 || !text1.trim()) {
-      setError("Please fill in Name and Perspective to drop your take.");
+    if (!text1.trim()) {
+      setError("Please fill in Perspective to drop your take.");
       return;
     }
     
     try {
       const payload = window.btoa(JSON.stringify({ 
         mode, 
-        p1Name: name1, 
         p1Arg: text1 
       }));
       const link = `${window.location.origin}${window.location.pathname}?data=${payload}`;
@@ -270,7 +255,6 @@ function App() {
           <div className="bg-white/5 border border-white/10 rounded-xl p-4">
             <p className="text-xs uppercase tracking-wide text-white/60 mb-2">Challenge Received</p>
             <div className="space-y-2">
-              <p className="font-semibold text-white">{name1}</p>
               <p className="text-white/80 text-sm">{text1}</p>
             </div>
           </div>
@@ -280,7 +264,7 @@ function App() {
         {showShareHub && activeLink && (
           <ShareHub
             activeLink={activeLink}
-            name={name1}
+            name="Anonymous"
             argument={text1}
             onClose={() => {
               setShowShareHub(false);
@@ -292,85 +276,51 @@ function App() {
         {/* Input Fields */}
         <div className="bg-white/5 border border-white/10 rounded-2xl shadow-2xl p-6 md:p-8 backdrop-blur space-y-4">
           {!isChallengeMode && (
-            <>
-              <div className="space-y-2">
-                <label className="text-xs uppercase tracking-wide text-white/60">
-                  Name
-                </label>
-                <input
-                  value={name1}
-                  onChange={(e) => {
-                    const sanitized = sanitizeInput(e.target.value);
-                    setName1(sanitized.slice(0, 50));
-                  }}
-                  placeholder="Your name (optional)"
-                  maxLength={50}
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs uppercase tracking-wide text-white/60">
-                  Perspective {text1.length > MAX_LENGTH && (
-                    <span className="text-red-400">({text1.length}/{MAX_LENGTH})</span>
-                  )}
-                </label>
-                <textarea
-                  value={text1}
-                  onChange={(e) => {
-                    const sanitized = validateInputLength(e.target.value, MAX_LENGTH);
-                    setText1(sanitized);
-                  }}
-                  placeholder="Your argument..."
-                  rows={4}
-                  maxLength={MAX_LENGTH}
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 resize-none"
-                />
-              </div>
-            </>
+            <div className="space-y-2">
+              <label className="text-xs uppercase tracking-wide text-white/60">
+                Perspective {text1.length > MAX_LENGTH && (
+                  <span className="text-red-400">({text1.length}/{MAX_LENGTH})</span>
+                )}
+              </label>
+              <textarea
+                value={text1}
+                onChange={(e) => {
+                  const sanitized = validateInputLength(e.target.value, MAX_LENGTH);
+                  setText1(sanitized);
+                }}
+                placeholder="Your argument..."
+                rows={4}
+                maxLength={MAX_LENGTH}
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 resize-none"
+              />
+            </div>
           )}
 
           {isChallengeMode && (
-            <>
-              <div className="space-y-2">
-                <label className="text-xs uppercase tracking-wide text-white/60">
-                  Your Name
-                </label>
-                <input
-                  value={name2}
-                  onChange={(e) => {
-                    const sanitized = sanitizeInput(e.target.value);
-                    setName2(sanitized.slice(0, 50));
-                  }}
-                  placeholder="Your name (optional)"
-                  maxLength={50}
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs uppercase tracking-wide text-white/60">
-                  Your Rebuttal {text2.length > MAX_LENGTH && (
-                    <span className="text-red-400">({text2.length}/{MAX_LENGTH})</span>
-                  )}
-                </label>
-                <textarea
-                  value={text2}
-                  onChange={(e) => {
-                    const sanitized = validateInputLength(e.target.value, MAX_LENGTH);
-                    setText2(sanitized);
-                  }}
-                  placeholder="Your rebuttal..."
-                  rows={4}
-                  maxLength={MAX_LENGTH}
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 resize-none"
-                />
-              </div>
-            </>
+            <div className="space-y-2">
+              <label className="text-xs uppercase tracking-wide text-white/60">
+                Your Rebuttal {text2.length > MAX_LENGTH && (
+                  <span className="text-red-400">({text2.length}/{MAX_LENGTH})</span>
+                )}
+              </label>
+              <textarea
+                value={text2}
+                onChange={(e) => {
+                  const sanitized = validateInputLength(e.target.value, MAX_LENGTH);
+                  setText2(sanitized);
+                }}
+                placeholder="Your rebuttal..."
+                rows={4}
+                maxLength={MAX_LENGTH}
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 resize-none"
+              />
+            </div>
           )}
 
           {/* Primary Action Button */}
           <button
             onClick={isChallengeMode ? handleAnalyze : handleDropTake}
-            disabled={isChallengeMode ? disableAnalyze : (!name1 || !text1.trim() || loading)}
+            disabled={isChallengeMode ? disableAnalyze : (!text1.trim() || loading)}
             className={`w-full rounded-xl px-6 py-4 font-bold text-white bg-gradient-to-r ${accent} shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-xl text-lg`}
           >
             {loading 
