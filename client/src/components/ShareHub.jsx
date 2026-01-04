@@ -23,75 +23,82 @@ export default function ShareHub({ activeLink, name, argument, onClose }) {
       // Copy link to clipboard
       await navigator.clipboard.writeText(activeLink);
       
-      // Download Perspective Card
-      if (perspectiveCardRef.current) {
-        const canvas = await html2canvas(perspectiveCardRef.current, {
+      // Generate the Perspective Card image
+      if (!perspectiveCardRef.current) {
+        setStatusMessage("Error: Could not generate image.");
+        setTimeout(() => setStatusMessage(""), 3000);
+        return;
+      }
+
+      // Temporarily make the card visible for html2canvas (but keep it off-screen)
+      const cardElement = perspectiveCardRef.current;
+      const originalStyle = {
+        position: cardElement.style.position,
+        left: cardElement.style.left,
+        top: cardElement.style.top,
+        opacity: cardElement.style.opacity,
+        visibility: cardElement.style.visibility,
+        pointerEvents: cardElement.style.pointerEvents,
+      };
+
+      // Make it visible but still off-screen for capture
+      cardElement.style.position = "fixed";
+      cardElement.style.left = "0px";
+      cardElement.style.top = "0px";
+      cardElement.style.opacity = "1";
+      cardElement.style.visibility = "visible";
+      cardElement.style.pointerEvents = "none";
+      cardElement.style.zIndex = "-1";
+
+      // Wait a bit for rendering
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      try {
+        const canvas = await html2canvas(cardElement, {
           backgroundColor: "#000000",
           scale: 2,
           useCORS: true,
           logging: false,
+          allowTaint: true,
+          width: cardElement.offsetWidth,
+          height: cardElement.offsetHeight,
         });
 
+        // Restore original styles
+        Object.keys(originalStyle).forEach(key => {
+          if (originalStyle[key]) {
+            cardElement.style[key] = originalStyle[key];
+          } else {
+            cardElement.style[key] = "";
+          }
+        });
+
+        // Download the image
         const link = document.createElement("a");
         link.download = `drop-take-${Date.now()}.png`;
         link.href = canvas.toDataURL("image/png");
         link.click();
+        
+        setStatusMessage("Image saved. Use Link Sticker in Stories.");
+        setTimeout(() => setStatusMessage(""), 5000);
+      } catch (canvasError) {
+        // Restore original styles on error
+        Object.keys(originalStyle).forEach(key => {
+          if (originalStyle[key]) {
+            cardElement.style[key] = originalStyle[key];
+          } else {
+            cardElement.style[key] = "";
+          }
+        });
+        throw canvasError;
       }
-      
-      setStatusMessage("Image saved. Use Link Sticker in Stories.");
-      setTimeout(() => setStatusMessage(""), 5000);
     } catch (error) {
       console.error("Failed to generate Instagram Story:", error);
-      setStatusMessage("Failed to generate image. Please try again.");
-      setTimeout(() => setStatusMessage(""), 3000);
-    }
-  };
-
-  const handleSnapchat = async () => {
-    try {
-      // Copy link to clipboard
-      await navigator.clipboard.writeText(activeLink);
-      
-      // Download Perspective Card
-      if (perspectiveCardRef.current) {
-        const canvas = await html2canvas(perspectiveCardRef.current, {
-          backgroundColor: "#000000",
-          scale: 2,
-          useCORS: true,
-          logging: false,
-        });
-
-        const link = document.createElement("a");
-        link.download = `drop-take-${Date.now()}.png`;
-        link.href = canvas.toDataURL("image/png");
-        link.click();
-      }
-      
-      setStatusMessage("Image saved. Use Link Sticker in Stories.");
+      setStatusMessage(`Failed to generate image: ${error.message || "Unknown error"}`);
       setTimeout(() => setStatusMessage(""), 5000);
-    } catch (error) {
-      console.error("Failed to generate Snapchat Story:", error);
-      setStatusMessage("Failed to generate image. Please try again.");
-      setTimeout(() => setStatusMessage(""), 3000);
     }
   };
 
-  const handleTikTok = async () => {
-    try {
-      const text = `You disagree? Say it with your chest. ${activeLink} #AuraWars #DropTake`;
-      await navigator.clipboard.writeText(text);
-      
-      // Try to open TikTok (may not work on all browsers)
-      window.open("https://www.tiktok.com/upload", "_blank");
-      
-      setStatusMessage("Text copied! Paste in TikTok comments.");
-      setTimeout(() => setStatusMessage(""), 5000);
-    } catch (err) {
-      console.error("Failed to copy TikTok text:", err);
-      setStatusMessage("Failed to copy. Please try again.");
-      setTimeout(() => setStatusMessage(""), 3000);
-    }
-  };
 
   const handleX = async () => {
     try {
@@ -102,67 +109,114 @@ export default function ShareHub({ activeLink, name, argument, onClose }) {
         return;
       }
 
-      const canvas = await html2canvas(perspectiveCardRef.current, {
-        backgroundColor: "#000000",
-        scale: 2,
-        useCORS: true,
-        logging: false,
-      });
+      // Temporarily make the card visible for html2canvas (but keep it off-screen)
+      const cardElement = perspectiveCardRef.current;
+      const originalStyle = {
+        position: cardElement.style.position,
+        left: cardElement.style.left,
+        top: cardElement.style.top,
+        opacity: cardElement.style.opacity,
+        visibility: cardElement.style.visibility,
+        pointerEvents: cardElement.style.pointerEvents,
+      };
 
-      // Convert canvas to blob
-      canvas.toBlob(async (blob) => {
-        if (!blob) {
-          setStatusMessage("Failed to generate image.");
-          setTimeout(() => setStatusMessage(""), 3000);
-          return;
-        }
+      // Make it visible but still off-screen for capture
+      cardElement.style.position = "fixed";
+      cardElement.style.left = "0px";
+      cardElement.style.top = "0px";
+      cardElement.style.opacity = "1";
+      cardElement.style.visibility = "visible";
+      cardElement.style.pointerEvents = "none";
+      cardElement.style.zIndex = "-1";
 
-        // Create a File object
-        const file = new File([blob], `drop-take-${Date.now()}.png`, { type: "image/png" });
+      // Wait a bit for rendering
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-        // Try Web Share API with files (if supported)
-        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-          try {
-            const text = `You disagree? Say it with your chest. ${activeLink} #AuraWars #DropTake`;
-            await navigator.share({
-              text: text,
-              files: [file],
-              title: "DropTake",
-            });
-            setStatusMessage("Shared successfully!");
+      try {
+        const canvas = await html2canvas(cardElement, {
+          backgroundColor: "#000000",
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          allowTaint: true,
+          width: cardElement.offsetWidth,
+          height: cardElement.offsetHeight,
+        });
+
+        // Restore original styles
+        Object.keys(originalStyle).forEach(key => {
+          if (originalStyle[key]) {
+            cardElement.style[key] = originalStyle[key];
+          } else {
+            cardElement.style[key] = "";
+          }
+        });
+
+        // Convert canvas to blob
+        canvas.toBlob(async (blob) => {
+          if (!blob) {
+            setStatusMessage("Failed to generate image blob.");
             setTimeout(() => setStatusMessage(""), 3000);
             return;
-          } catch (shareError) {
-            // If share fails, fall back to Twitter intent
-            console.log("Web Share failed, falling back to Twitter intent:", shareError);
           }
-        }
 
-        // Fallback: Download image and open Twitter with text
-        const link = document.createElement("a");
-        link.download = `drop-take-${Date.now()}.png`;
-        link.href = URL.createObjectURL(blob);
-        link.click();
-        URL.revokeObjectURL(link.href);
+          // Create a File object
+          const file = new File([blob], `drop-take-${Date.now()}.png`, { type: "image/png" });
 
-        const text = `You disagree? Say it with your chest. ${activeLink} #AuraWars #DropTake`;
-        const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
-        window.open(url, "_blank", "width=550,height=420");
-        
-        setStatusMessage("Image downloaded! Attach it to your tweet.");
-        setTimeout(() => setStatusMessage(""), 5000);
-      }, "image/png");
+          // Try Web Share API with files (if supported)
+          if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+              const text = `You disagree? Say it with your chest. ${activeLink} #AuraWars #DropTake`;
+              await navigator.share({
+                text: text,
+                files: [file],
+                title: "DropTake",
+              });
+              setStatusMessage("Shared successfully!");
+              setTimeout(() => setStatusMessage(""), 3000);
+              return;
+            } catch (shareError) {
+              // If share fails, fall back to Twitter intent
+              console.log("Web Share failed, falling back to Twitter intent:", shareError);
+            }
+          }
+
+          // Fallback: Download image and open Twitter with text
+          const link = document.createElement("a");
+          link.download = `drop-take-${Date.now()}.png`;
+          link.href = URL.createObjectURL(blob);
+          link.click();
+          URL.revokeObjectURL(link.href);
+
+          const text = `You disagree? Say it with your chest. ${activeLink} #AuraWars #DropTake`;
+          const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+          window.open(url, "_blank", "width=550,height=420");
+          
+          setStatusMessage("Image downloaded! Attach it to your tweet.");
+          setTimeout(() => setStatusMessage(""), 5000);
+        }, "image/png");
+      } catch (canvasError) {
+        // Restore original styles on error
+        Object.keys(originalStyle).forEach(key => {
+          if (originalStyle[key]) {
+            cardElement.style[key] = originalStyle[key];
+          } else {
+            cardElement.style[key] = "";
+          }
+        });
+        throw canvasError;
+      }
     } catch (error) {
       console.error("Failed to generate X post:", error);
-      setStatusMessage("Failed to generate image. Please try again.");
-      setTimeout(() => setStatusMessage(""), 3000);
+      setStatusMessage(`Failed to generate image: ${error.message || "Unknown error"}`);
+      setTimeout(() => setStatusMessage(""), 5000);
     }
   };
 
   return (
     <div className="space-y-6">
       {/* Hidden Perspective Card for export */}
-      <div className="fixed -left-[9999px] -top-[9999px] opacity-0 pointer-events-none">
+      <div className="fixed left-0 top-0 w-[405px] h-[720px] opacity-0 pointer-events-none" style={{ zIndex: -1, visibility: "hidden" }}>
         <PerspectiveCard 
           ref={perspectiveCardRef}
           name={name} 
@@ -184,16 +238,7 @@ export default function ShareHub({ activeLink, name, argument, onClose }) {
           </div>
         )}
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {/* TikTok Button */}
-          <button
-            onClick={handleTikTok}
-            className="w-full rounded-xl px-4 py-4 font-bold text-white shadow-lg transition hover:shadow-xl transform hover:scale-105"
-            style={{ backgroundColor: "#000000" }}
-          >
-            🎵 TikTok
-          </button>
-
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {/* Instagram Button */}
           <button
             onClick={handleInstagram}
@@ -201,15 +246,6 @@ export default function ShareHub({ activeLink, name, argument, onClose }) {
             style={{ backgroundColor: "#E1306C" }}
           >
             📸 Instagram
-          </button>
-
-          {/* Snapchat Button */}
-          <button
-            onClick={handleSnapchat}
-            className="w-full rounded-xl px-4 py-4 font-bold text-black shadow-lg transition hover:shadow-xl transform hover:scale-105"
-            style={{ backgroundColor: "#FFFC00" }}
-          >
-            👻 Snapchat
           </button>
 
           {/* X Button */}
@@ -224,7 +260,7 @@ export default function ShareHub({ activeLink, name, argument, onClose }) {
           {/* Copy Link Button */}
           <button
             onClick={handleCopyLink}
-            className="w-full rounded-xl px-4 py-4 font-bold text-white bg-gradient-to-r from-pink-500 to-orange-500 shadow-lg transition hover:shadow-xl transform hover:scale-105 md:col-span-1 col-span-2"
+            className="w-full rounded-xl px-4 py-4 font-bold text-white bg-gradient-to-r from-pink-500 to-orange-500 shadow-lg transition hover:shadow-xl transform hover:scale-105"
           >
             📋 Copy Link
           </button>
